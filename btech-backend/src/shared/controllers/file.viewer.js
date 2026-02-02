@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const Jimp = require('jimp');
-const AuditLog = require('../models/AuditLog');
+const AuditService = require('../services/audit.service');
 
 // @desc    Secure View (Watermarked)
 exports.viewFile = async (req, res) => {
@@ -11,12 +11,13 @@ exports.viewFile = async (req, res) => {
 
         // Audit Log
         if (req.user) {
-            await AuditLog.create({
-                user: req.user.id,
+            await AuditService.log({
+                userId: req.user.id,
                 action: 'VIEW_DOCUMENT',
+                topics: ['file', 'view', 'access'],
                 resource: filename,
-                description: `Viewed by ${req.user.name} (${req.user.role})`,
-                ipAddress: req.ip
+                description: 'File accessed',
+                req
             });
         }
 

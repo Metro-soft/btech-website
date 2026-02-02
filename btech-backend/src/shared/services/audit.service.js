@@ -1,4 +1,5 @@
 const AuditLog = require('../models/AuditLog');
+const IpUtils = require('../utils/ip.utils');
 
 /**
  * Service to handle system-wide audit logging
@@ -35,7 +36,7 @@ class AuditService {
             };
 
             if (req) {
-                entry.ipAddress = req.ip || req.connection.remoteAddress;
+                entry.ipAddress = IpUtils.getClientIp(req);
                 entry.userAgent = req.get('User-Agent');
 
                 // FORENSIC DATA: Capture Headers & Connection Info
@@ -51,7 +52,10 @@ class AuditService {
                 };
             }
 
-            await AuditLog.create(entry);
+            const newLog = await AuditLog.create(entry);
+            if (global.io) {
+                global.io.emit('audit_log', newLog);
+            }
             // console.log(`[Audit] ${action} on ${resource} by ${userId}`);
         } catch (err) {
             console.error('Audit Log Failed:', err.message);

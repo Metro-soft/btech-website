@@ -19,7 +19,7 @@ const AuditLogSchema = new mongoose.Schema({
   action: {
     type: String,
     // required: true, // Made optional for transition to 'topics'
-    enum: ['VIEW_DOCUMENT', 'DOWNLOAD_ORIGINAL', 'LOGIN', 'LOGOUT', 'STATUS_CHANGE', 'PAYMENT', 'ASSIGNMENT', 'CREATE', 'UPDATE', 'DELETE', 'WITHDRAWAL_APPROVAL']
+    enum: ['VIEW_DOCUMENT', 'DOWNLOAD_ORIGINAL', 'LOGIN', 'LOGOUT', 'STATUS_CHANGE', 'PAYMENT', 'ASSIGNMENT', 'CREATE', 'UPDATE', 'DELETE', 'WITHDRAWAL_APPROVAL', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE', 'USER_SUSPEND', 'USER_ACTIVATE']
   },
   resource: {
     type: String, // Filename or Resource ID

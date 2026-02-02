@@ -28,7 +28,7 @@ class AuthService {
         return this._generateAuthResponse(user);
     }
 
-    async login(email, password) {
+    async login(email, password, req) {
         // Check user
         const user = await User.findOne({ email });
         if (!user) {
@@ -45,10 +45,12 @@ class AuthService {
         const AuditService = require('../../shared/services/audit.service');
         await AuditService.log({
             userId: user._id,
+            action: 'LOGIN',
             topics: ['auth', 'login', 'info'],
-            message: `User ${user.name} logged in`,
+            description: 'Login successful',
             resource: user.email,
-            buffer: 'db'
+            buffer: 'db',
+            req
         });
 
         return this._generateAuthResponse(user);
@@ -109,7 +111,7 @@ class AuthService {
         return await User.find(query).select('-password').sort({ createdAt: -1 });
     }
 
-    async createUser(data) {
+    async createUser(data, req) {
         // basic validation handled by controller/mongoose, but check email uniqueness
         const existing = await User.findOne({ email: data.email });
         if (existing) throw new Error('User already exists');
@@ -122,10 +124,24 @@ class AuthService {
             password: hashedPassword
         });
 
+        // Audit Log
+        const AuditService = require('../../shared/services/audit.service');
+        if (req && req.user) {
+            await AuditService.log({
+                userId: req.user.id,
+                action: 'USER_CREATE',
+                topics: ['auth', 'users', 'create'],
+                description: `Created user: ${user.email}`,
+                resource: user.email,
+                buffer: 'db',
+                req
+            });
+        }
+
         return user;
     }
 
-    async updateUser(id, data) {
+    async updateUser(id, data, req) {
         const updates = { ...data };
 
         // Hash password if updating
@@ -136,12 +152,42 @@ class AuthService {
 
         const user = await User.findByIdAndUpdate(id, updates, { new: true }).select('-password');
         if (!user) throw new Error('User not found');
+
+        // Audit Log
+        const AuditService = require('../../shared/services/audit.service');
+        if (req && req.user) {
+            await AuditService.log({
+                userId: req.user.id,
+                action: 'USER_UPDATE',
+                topics: ['auth', 'users', 'update'],
+                description: `Updated user: ${user.email}`,
+                resource: user.email,
+                buffer: 'db',
+                req
+            });
+        }
+
         return user;
     }
 
-    async deleteUser(id) {
+    async deleteUser(id, req) {
         const user = await User.findByIdAndDelete(id);
         if (!user) throw new Error('User not found');
+
+        // Audit Log
+        const AuditService = require('../../shared/services/audit.service');
+        if (req && req.user) {
+            await AuditService.log({
+                userId: req.user.id, // The admin who deleted
+                action: 'USER_DELETE',
+                topics: ['auth', 'users', 'delete'],
+                description: `Deleted user: ${user.email}`,
+                resource: user.email, // Log the email of deleted user
+                buffer: 'db',
+                req
+            });
+        }
+
         return { message: 'User deleted successfully' };
     }
 }

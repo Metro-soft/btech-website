@@ -31,7 +31,7 @@ exports.login = async (req, res) => {
     }
 
     // 2. Call Service
-    const result = await authService.login(value.email, value.password);
+    const result = await authService.login(value.email, value.password, req);
 
     // 3. Send Response
     res.json(result);
@@ -76,7 +76,7 @@ exports.getAllUsers = async (req, res) => {
 // @desc    Create User (Admin)
 exports.createUser = async (req, res) => {
   try {
-    const user = await authService.createUser(req.body);
+    const user = await authService.createUser(req.body, req);
     res.status(201).json(user);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -86,7 +86,7 @@ exports.createUser = async (req, res) => {
 // @desc    Update User (Admin)
 exports.updateUser = async (req, res) => {
   try {
-    const user = await authService.updateUser(req.params.id, req.body);
+    const user = await authService.updateUser(req.params.id, req.body, req);
     res.json(user);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -96,7 +96,7 @@ exports.updateUser = async (req, res) => {
 // @desc    Delete User (Admin)
 exports.deleteUser = async (req, res) => {
   try {
-    const result = await authService.deleteUser(req.params.id);
+    const result = await authService.deleteUser(req.params.id, req);
     res.json(result);
   } catch (err) {
     res.status(400).json({ message: err.message });

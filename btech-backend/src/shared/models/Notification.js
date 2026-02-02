@@ -1,25 +1,60 @@
 const mongoose = require('mongoose');
 
-const notificationSchema = new mongoose.Schema({
-  recipient: { 
-    type: mongoose.Schema.Types.ObjectId, 
+const NotificationSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true,
+    index: true
+  },
+  type: {
+    type: String,
+    enum: ['SYSTEM', 'APPLICATION', 'FINANCE', 'TASK', 'SECURITY', 'AI_INSIGHT'],
     required: true
   },
-  
-  title: { type: String, required: true },
-  
-  message: { type: String, required: true },
-  
-  isRead: { type: Boolean, default: false },
-  
-  type: { 
-    type: String, 
-    enum: ['GENERAL', 'WARNING', 'SUCCESS', 'UPDATE', 'FOLLOW_UP'], 
-    default: 'GENERAL' 
+  priority: {
+    type: String,
+    enum: ['LOW', 'NORMAL', 'HIGH', 'CRITICAL'],
+    default: 'NORMAL'
   },
-  
-  link: { type: String } // Deepbox/Deep link
-}, { timestamps: true });
+  title: {
+    type: String,
+    required: true
+  },
+  message: {
+    type: String,
+    required: true
+  },
 
-module.exports = mongoose.model('Notification', notificationSchema);
+  // AI Specifics
+  isAiGenerated: {
+    type: Boolean,
+    default: false
+  },
+  aiActionSuggestion: {
+    type: String
+  },
+
+  // Action / Deep Link Payload
+  action: {
+    route: { type: String },     // e.g., '/admin/applications/123'
+    entityId: { type: String },  // e.g., '65b...'
+    payload: { type: Map, of: String }
+  },
+
+  isRead: {
+    type: Boolean,
+    default: false
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    expires: '90d' // Auto-delete after 90 days
+  }
+});
+
+module.exports = mongoose.model('Notification', NotificationSchema);
