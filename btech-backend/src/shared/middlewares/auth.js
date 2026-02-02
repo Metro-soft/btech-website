@@ -13,10 +13,12 @@ exports.protect = (req, res, next) => {
       req.user = decoded; // decoded should include { id, role, ... }
       return next();
     } catch (err) {
+      console.log('[AUTH FAILED] Token verify error:', err.message);
       return res.status(401).json({ message: 'Invalid token' });
     }
   }
 
+  console.log('[AUTH FAILED] No token or invalid header:', authHeader);
   return res.status(401).json({ message: 'No token provided' });
 };
 

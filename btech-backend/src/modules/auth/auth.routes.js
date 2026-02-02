@@ -13,4 +13,10 @@ router.get('/me', protect, (req, res) => {
 
 router.put('/profile', protect, require('./auth.controller').updateProfile);
 
+// Admin: User Management
+router.get('/users', protect, require('./auth.controller').getAllUsers);
+router.post('/users', protect, require('./auth.controller').createUser);
+router.put('/users/:id', protect, require('./auth.controller').updateUser);
+router.delete('/users/:id', protect, require('./auth.controller').deleteUser);
+
 module.exports = router;

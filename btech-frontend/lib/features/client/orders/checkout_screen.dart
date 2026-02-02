@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/network/application_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String applicationId;
@@ -43,15 +44,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       // Simulate network feeling for better UX
       await Future.delayed(const Duration(seconds: 2));
 
-      await _service.processPayment(
+      // Auto-fill details if using Profile
+      // For now, we assume user is logged in and we can get their details
+      // from the Auth Service if we wanted to auto-fill payment fields.
+
+      final result = await _service.processPayment(
         applicationId: widget.applicationId,
         amount: widget.amount,
         method: _selectedMethod,
         transactionId: txnId,
+        phone: _selectedMethod == 'MPESA' ? _phoneController.text : null,
       );
 
+      debugPrint('Payment Response: $result'); // Debug
+
       if (mounted) {
-        _showSuccessDialog();
+        setState(() => _isLoading = false);
+
+        // ALWAYS Web Checkout now (Unified)
+        if (result['url'] != null) {
+          _showInAppBrowser(result['url']);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: No checkout URL received')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -66,6 +83,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showInAppBrowser(String url) {
+    // Basic WebView Implementation
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (String url) {
+            if (url.contains('success') || url.contains('completed')) {
+              Navigator.pop(context); // Close WebView
+              _showSuccessDialog();
+            }
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(url));
+
+    showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (c) => Scaffold(
+              appBar: AppBar(title: const Text('Complete Payment')),
+              body: WebViewWidget(controller: controller),
+            ));
   }
 
   void _showSuccessDialog() {

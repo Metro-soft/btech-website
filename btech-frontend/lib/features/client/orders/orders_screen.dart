@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../../core/network/application_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../data/client_application_service.dart';
 import 'application_detail_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
-// ... (rest of class)
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  final _service = ApplicationService();
+  final _service = ClientApplicationService();
   late Future<List<Map<String, dynamic>>> _ordersFuture;
 
   @override
@@ -36,19 +36,53 @@ class _OrdersScreenState extends State<OrdersScreen> {
         appBar: AppBar(
           backgroundColor: const Color(0xFF021024),
           elevation: 0,
-          title: const Text('My Applications',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text(
+            'My Applications',
+            style: GoogleFonts.outfit(
+                color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           centerTitle: true,
           automaticallyImplyLeading: false,
-          bottom: const TabBar(
-            indicatorColor: Color(0xFFC1E8FF),
-            labelColor: Color(0xFFC1E8FF),
-            unselectedLabelColor: Colors.grey,
-            tabs: [
-              Tab(text: 'Active'),
-              Tab(text: 'History'),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(70),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              ),
+              child: TabBar(
+                indicator: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF7DA0CA), Color(0xFF052659)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white54,
+                labelStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                dividerColor: Colors.transparent, // Remove default divider
+                tabs: const [
+                  Tab(text: 'Active Applications'),
+                  Tab(text: 'History'),
+                ],
+              ),
+            ),
           ),
         ),
         body: RefreshIndicator(
@@ -78,11 +112,25 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   .where((o) => ['COMPLETED', 'REJECTED'].contains(o['status']))
                   .toList();
 
-              return TabBarView(
-                children: [
-                  _buildOrderList(activeOrders, isActive: true),
-                  _buildOrderList(historyOrders, isActive: false),
-                ],
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  // Responsive Columns
+                  int crossAxisCount = 1;
+                  if (constraints.maxWidth > 1100) {
+                    crossAxisCount = 3;
+                  } else if (constraints.maxWidth > 700) {
+                    crossAxisCount = 2;
+                  }
+
+                  return TabBarView(
+                    children: [
+                      _buildOrderList(activeOrders,
+                          isActive: true, crossAxisCount: crossAxisCount),
+                      _buildOrderList(historyOrders,
+                          isActive: false, crossAxisCount: crossAxisCount),
+                    ],
+                  );
+                },
               );
             },
           ),
@@ -92,158 +140,197 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Widget _buildOrderList(List<Map<String, dynamic>> orders,
-      {required bool isActive}) {
+      {required bool isActive, required int crossAxisCount}) {
     if (orders.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(isActive ? Icons.work_history_outlined : Icons.history,
-                size: 64, color: Colors.white24),
+                size: 64, color: Colors.white12),
             const SizedBox(height: 16),
             Text(
               isActive ? 'No active applications' : 'No history yet',
-              style: const TextStyle(color: Colors.white54, fontSize: 16),
+              style: GoogleFonts.outfit(color: Colors.white54, fontSize: 16),
             ),
           ],
         ),
       );
     }
 
-    return ListView.separated(
+    return GridView.builder(
       padding: const EdgeInsets.all(16),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        childAspectRatio: 1.6, // Aspect ratio for card shape
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
       itemCount: orders.length,
-      separatorBuilder: (c, i) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        return _buildSmartCard(orders[index]);
+        return _buildPremiumOrderCard(orders[index]);
       },
     );
   }
 
-  Widget _buildSmartCard(Map<String, dynamic> order) {
+  Widget _buildPremiumOrderCard(Map<String, dynamic> order) {
     final status = order['status'] ?? 'PENDING';
     final type = order['type'] ?? 'Application';
     final date = order['createdAt'] != null
         ? DateFormat('MMM d').format(DateTime.parse(order['createdAt']))
         : 'Active';
 
-    // Status Logic
-    Color statusColor = Colors.grey;
-    double progress = 0.1;
-    String statusText = status;
+    // Status Styling
+    Color baseColor;
+    Color accentColor;
+    String statusText;
 
     switch (status) {
       case 'PENDING':
-        statusColor = Colors.orange;
-        progress = 0.3;
+        baseColor = const Color(0xFFF59E0B); // Amber
+        accentColor = const Color(0xFFFCD34D);
         statusText = 'Reviewing';
         break;
       case 'ASSIGNED':
-        statusColor = Colors.blue;
-        progress = 0.6;
+      case 'IN_PROGRESS':
+        baseColor = const Color(0xFF3B82F6); // Blue
+        accentColor = const Color(0xFF93C5FD);
         statusText = 'In Progress';
         break;
       case 'COMPLETED':
-        statusColor = Colors.green;
-        progress = 1.0;
+        baseColor = const Color(0xFF10B981); // Emerald
+        accentColor = const Color(0xFF6EE7B7);
         statusText = 'Completed';
         break;
       case 'REJECTED':
-        statusColor = Colors.red;
-        progress = 1.0;
-        statusText = 'Action Needed';
+        baseColor = const Color(0xFFEF4444); // Red
+        accentColor = const Color(0xFFFCA5A5);
+        statusText = 'Declined';
         break;
+      default:
+        baseColor = Colors.grey;
+        accentColor = Colors.grey.shade400;
+        statusText = status;
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF052659), // Card BG
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
+    // Service Icon
+    IconData serviceIcon = Icons.description;
+    if (type.contains('KRA')) serviceIcon = Icons.receipt_long;
+    if (type.contains('eTA')) serviceIcon = Icons.flight_takeoff;
+    if (type.contains('HELB')) serviceIcon = Icons.school;
+    if (type.contains('Cyber')) serviceIcon = Icons.computer;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => ApplicationDetailScreen(application: order)));
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                baseColor.withValues(alpha: 0.15),
+                const Color(0xFF021024),
+              ]),
+          border: Border.all(color: baseColor.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
               color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 10,
-              offset: const Offset(0, 4))
-        ],
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            // Navigation to Detail Screen (TODO)
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        ApplicationDetailScreen(application: order)));
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(type,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold)),
-                        Text('#${order['ticketNumber'] ?? '---'} • $date',
-                            style: const TextStyle(
-                                color: Colors.white38, fontSize: 12)),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: statusColor.withValues(alpha: 0.4)),
-                      ),
-                      child: Text(statusText,
-                          style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12)),
-                    )
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // Progress Bar
-                Stack(
-                  children: [
-                    Container(
-                        height: 6,
-                        decoration: BoxDecoration(
-                            color: Colors.black26,
-                            borderRadius: BorderRadius.circular(3))),
-                    FractionallySizedBox(
-                      widthFactor: progress,
-                      child: Container(
-                          height: 6,
-                          decoration: BoxDecoration(
-                              color: statusColor,
-                              borderRadius: BorderRadius.circular(3),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: statusColor.withValues(alpha: 0.6),
-                                    blurRadius: 8)
-                              ])),
-                    ),
-                  ],
-                ),
-              ],
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Background Large Faded Icon
+            Positioned(
+              right: -10,
+              bottom: -10,
+              child: Icon(serviceIcon,
+                  size: 100, color: baseColor.withValues(alpha: 0.05)),
             ),
-          ),
+
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header: Icon + Status Pill
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: baseColor.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(serviceIcon, color: accentColor, size: 24),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: baseColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    ],
+                  ),
+
+                  const Spacer(),
+
+                  // Content
+                  Text(
+                    type,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Footer: Ticket + Date
+                  Row(
+                    children: [
+                      const Icon(Icons.confirmation_number_outlined,
+                          size: 14, color: Colors.white54),
+                      const SizedBox(width: 4),
+                      Text(
+                        '#${order['ticketNumber'] ?? '---'}',
+                        style: GoogleFonts.outfit(
+                            color: Colors.white54, fontSize: 13),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.calendar_today_outlined,
+                          size: 14, color: Colors.white54),
+                      const SizedBox(width: 4),
+                      Text(
+                        date,
+                        style: GoogleFonts.outfit(
+                            color: Colors.white54, fontSize: 13),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

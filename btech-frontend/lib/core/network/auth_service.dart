@@ -105,9 +105,9 @@ class AuthService {
     String? phone,
     String? password,
     String? profilePicture,
+    Map<String, dynamic>? staffDetails,
   }) async {
     final token = await _storage.read(key: 'token');
-    // final prefs = await SharedPreferences.getInstance(); // Not needed if just reading token
 
     final Map<String, dynamic> body = {};
     if (name != null) body['name'] = name;
@@ -115,6 +115,7 @@ class AuthService {
     if (phone != null) body['phone'] = phone;
     if (password != null && password.isNotEmpty) body['password'] = password;
     if (profilePicture != null) body['profilePicture'] = profilePicture;
+    if (staffDetails != null) body['staffDetails'] = staffDetails;
 
     final response = await http.put(
       Uri.parse('$baseUrl/profile'),

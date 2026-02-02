@@ -31,6 +31,7 @@ const updateProfileSchema = Joi.object({
     phone: Joi.string().pattern(/^[0-9]+$/).min(10).max(15),
     password: Joi.string().min(6),
     profilePicture: Joi.string().allow(null, ''),
+    staffDetails: Joi.object().optional(),
 });
 
 module.exports = {

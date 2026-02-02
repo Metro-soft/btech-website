@@ -4,9 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/network/auth_service.dart';
 import '../../../core/network/application_service.dart';
-import '../orders/orders_screen.dart';
-import 'profile_screen.dart'; // Sibling import
-import '../wallet/wallet_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +13,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
   String? _userName;
   String? _role;
   int _activeAppsCount = 0;
@@ -65,84 +61,56 @@ class _HomeScreenState extends State<HomeScreen> {
     const accentColor = Color(0xFF7DA0CA);
     const highlightColor = Color(0xFFC1E8FF);
 
-    // Screens configuration
-    final List<Widget> screens = [
-      HomeContent(activeCount: _activeAppsCount),
-      const OrdersScreen(),
-      const WalletScreen(),
-      const ProfileScreen(),
-    ];
-
     return Scaffold(
-      backgroundColor: const Color(0xFF021024),
-      // Show AppBar only for Home Tab (Index 0)
-      appBar: _selectedIndex == 0
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              title: Row(
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: cardColor,
-                    child: Icon(Icons.person, color: highlightColor),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Hello, ${_userName?.split(' ')[0] ?? "Guest"}',
-                        style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16),
-                      ),
-                      Text(
-                        'Welcome to BTECH Plus',
-                        style: GoogleFonts.outfit(
-                            color: accentColor, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_outlined,
-                      color: highlightColor),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('No new notifications')),
-                    );
-                  },
+      backgroundColor: Colors.transparent, // Let MainLayout background show
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false, // Don't show back button on Home
+        title: Row(
+          children: [
+            const CircleAvatar(
+              backgroundColor: cardColor,
+              child: Icon(Icons.person, color: highlightColor),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hello, ${_userName?.split(' ')[0] ?? "Guest"}',
+                  style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
                 ),
-                if (_role == null)
-                  TextButton(
-                    onPressed: () => context.go('/login'),
-                    child: const Text('Login',
-                        style: TextStyle(color: highlightColor)),
-                  )
+                Text(
+                  'Welcome to BTECH Plus',
+                  style: GoogleFonts.outfit(color: accentColor, fontSize: 12),
+                ),
               ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon:
+                const Icon(Icons.notifications_outlined, color: highlightColor),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No new notifications')),
+              );
+            },
+          ),
+          if (_role == null)
+            TextButton(
+              onPressed: () => context.go('/login'),
+              child:
+                  const Text('Login', style: TextStyle(color: highlightColor)),
             )
-          : null, // No AppBar for other tabs (they handle their own)
-
-      body: screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        backgroundColor: cardColor,
-        selectedItemColor: highlightColor,
-        unselectedItemColor: accentColor,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long), label: 'Orders'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
+      body: HomeContent(activeCount: _activeAppsCount),
     );
   }
 }
@@ -212,6 +180,236 @@ class _HomeContentState extends State<HomeContent> {
     const accentColor = Color(0xFF7DA0CA);
     const highlightColor = Color(0xFFC1E8FF);
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 900) {
+          return _buildDesktopLayout(
+              bgColor, cardColor, accentColor, highlightColor);
+        } else {
+          return _buildMobileLayout(
+              bgColor, cardColor, accentColor, highlightColor);
+        }
+      },
+    );
+  }
+
+  Widget _buildDesktopLayout(
+      Color bgColor, Color cardColor, Color accentColor, Color highlightColor) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Section: Stats + Carousel split
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left: Welcome & Carousel
+              Expanded(
+                flex: 7,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Welcome back,',
+                        style: GoogleFonts.outfit(
+                            color: Colors.white70, fontSize: 16)),
+                    Text(
+                      'Ready to apply?',
+                      style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 24),
+                    HeroCarousel(
+                        cardColor: cardColor, highlightColor: highlightColor),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 32),
+              // Right: Stats & Notifications/Quick Info
+              Expanded(
+                flex: 3,
+                child: Column(
+                  children: [
+                    if (widget.activeCount > 0)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: Colors.orange.withValues(alpha: 0.5))),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline,
+                                color: Colors.orange, size: 32),
+                            const SizedBox(height: 16),
+                            Text(
+                              '${widget.activeCount} Active Applications',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Check your orders tab for updates.',
+                              style:
+                                  GoogleFonts.outfit(color: Colors.orange[100]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+                    // Search in sidebar for quick access
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (value) =>
+                          setState(() => _searchQuery = value),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: cardColor,
+                        hintText: 'Search services...',
+                        hintStyle: TextStyle(color: accentColor),
+                        prefixIcon: Icon(Icons.search, color: accentColor),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 48),
+
+          // Categories Row
+          Row(
+            children: [
+              Text('Services',
+                  style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(width: 32),
+              Expanded(
+                child: SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: [
+                      'All',
+                      'Government',
+                      'Education',
+                      'Banking',
+                      'Travel'
+                    ].length,
+                    separatorBuilder: (c, i) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      final category = [
+                        'All',
+                        'Government',
+                        'Education',
+                        'Banking',
+                        'Travel'
+                      ][index];
+                      final isSelected = _selectedCategory == category;
+                      return GestureDetector(
+                        onTap: () =>
+                            setState(() => _selectedCategory = category),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected ? highlightColor : cardColor,
+                            borderRadius: BorderRadius.circular(20),
+                            border: isSelected
+                                ? null
+                                : Border.all(
+                                    color: accentColor.withValues(alpha: 0.3)),
+                          ),
+                          child: Center(
+                            child: Text(
+                              category,
+                              style: GoogleFonts.outfit(
+                                color: isSelected
+                                    ? const Color(0xFF021024)
+                                    : accentColor,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 32),
+
+          // Grid Content
+          if (_filteredServices.isEmpty)
+            SizedBox(
+              height: 300,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off,
+                        size: 64, color: Colors.white.withValues(alpha: 0.5)),
+                    const SizedBox(height: 16),
+                    Text('No services found matching "$_searchQuery"',
+                        style: GoogleFonts.outfit(
+                            color: Colors.white54, fontSize: 18)),
+                  ],
+                ),
+              ),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Responsive Grid count based on width even within desktop mode
+                int crossAxisCount = constraints.maxWidth > 1200 ? 4 : 3;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 24,
+                    mainAxisSpacing: 24,
+                    childAspectRatio: 1.2,
+                  ),
+                  itemCount: _filteredServices.length,
+                  itemBuilder: (context, index) {
+                    final service = _filteredServices[index];
+                    return _buildServiceCard(
+                        service, bgColor, cardColor, highlightColor);
+                  },
+                );
+              },
+            ),
+
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(
+      Color bgColor, Color cardColor, Color accentColor, Color highlightColor) {
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -241,8 +439,7 @@ class _HomeContentState extends State<HomeContent> {
                 ],
               ),
             ),
-          const HeroCarousel(
-              cardColor: cardColor, highlightColor: highlightColor),
+          HeroCarousel(cardColor: cardColor, highlightColor: highlightColor),
           const SizedBox(height: 24),
 
           // Search Bar
@@ -262,13 +459,13 @@ class _HomeContentState extends State<HomeContent> {
               controller: _searchController,
               onChanged: (value) => setState(() => _searchQuery = value),
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Search for a service...',
                 hintStyle: TextStyle(color: accentColor),
-                prefixIcon: Icon(Icons.search, color: accentColor),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF7DA0CA)),
                 border: InputBorder.none,
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
             ),
           ),
@@ -355,87 +552,90 @@ class _HomeContentState extends State<HomeContent> {
                 itemCount: _filteredServices.length,
                 itemBuilder: (context, index) {
                   final service = _filteredServices[index];
-                  return GestureDetector(
-                    onTap: () => context.push(service['route'] as String),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            right: -10,
-                            top: -10,
-                            child: Icon(service['icon'] as IconData,
-                                size: 80,
-                                color: Colors.white.withValues(alpha: 0.03)),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: const BoxDecoration(
-                                    color: bgColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(service['icon'] as IconData,
-                                      color: highlightColor, size: 24),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      service['name'] as String,
-                                      style: GoogleFonts.outfit(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'Apply Now',
-                                          style: GoogleFonts.outfit(
-                                            color: highlightColor.withValues(
-                                                alpha: 0.7),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Icon(Icons.arrow_forward,
-                                            size: 12,
-                                            color: highlightColor.withValues(
-                                                alpha: 0.7))
-                                      ],
-                                    )
-                                  ],
-                                )
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+                  return _buildServiceCard(
+                      service, bgColor, cardColor, highlightColor);
                 },
               ),
             ),
           const SizedBox(height: 100), // Bottom padding
         ],
+      ),
+    );
+  }
+
+  Widget _buildServiceCard(Map<String, dynamic> service, Color bgColor,
+      Color cardColor, Color highlightColor) {
+    return GestureDetector(
+      onTap: () => context.push(service['route'] as String),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -10,
+              top: -10,
+              child: Icon(service['icon'] as IconData,
+                  size: 80, color: Colors.white.withValues(alpha: 0.03)),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(service['icon'] as IconData,
+                        color: highlightColor, size: 24),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        service['name'] as String,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            'Apply Now',
+                            style: GoogleFonts.outfit(
+                              color: highlightColor.withValues(alpha: 0.7),
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_forward,
+                              size: 12,
+                              color: highlightColor.withValues(alpha: 0.7))
+                        ],
+                      )
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -516,39 +716,41 @@ class HeroCarousel extends StatelessWidget {
                   ),
                   Padding(
                     padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: highlightColor.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8)),
-                            child: Text('UPDATE',
-                                style: TextStyle(
-                                    color: highlightColor,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold))),
-                        const SizedBox(height: 12),
-                        Text(
-                          banner['title']!,
-                          style: GoogleFonts.outfit(
-                            fontSize: 22.0,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                  color: highlightColor.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: Text('UPDATE',
+                                  style: TextStyle(
+                                      color: highlightColor,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold))),
+                          const SizedBox(height: 12),
+                          Text(
+                            banner['title']!,
+                            style: GoogleFonts.outfit(
+                              fontSize: 22.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          banner['subtitle']!,
-                          style: GoogleFonts.outfit(
-                            fontSize: 14.0,
-                            color: Colors.white70,
+                          const SizedBox(height: 8),
+                          Text(
+                            banner['subtitle']!,
+                            style: GoogleFonts.outfit(
+                              fontSize: 14.0,
+                              color: Colors.white70,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],

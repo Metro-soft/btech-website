@@ -1,5 +1,6 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const path = require('path');
 const connectDB = require('./src/config/db');
 // const academyRoutes = require('./routes/academyRoutes'); // Removed legacy
 
@@ -16,29 +17,44 @@ const app = express();
 const cors = require('cors');
 
 // Middleware
-app.use(cors());
+// Middleware
+app.use(cors({
+  origin: '*', // Allow all origins (or specify client URL)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token']
+}));
 app.use(express.json({ limit: '50mb' })); // Accept JSON with increased limit for Base64
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Modular Routes
-const authRoutes = require('./src/modules/auth/auth.routes');
-const orderRoutes = require('./src/modules/client/orders/order.routes');
-const adminDashboardRoutes = require('./src/modules/admin/dashboard/dashboard.routes');
-const clientOrderRoutes = require('./src/modules/client/orders/order.routes'); // Changed from orderRoutes to order.routes
-const walletRoutes = require('./src/modules/client/wallet/walletRoutes');
-const staffRoutes = require('./src/modules/staff/staff.routes'); // New Staff Module
+const { rateLimiter, sqlInjectionDetector } = require('./src/shared/middlewares/securityLogger');
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-const errorHandler = require('./src/shared/middlewares/error'); // If exists
+// --- SECURITY MIDDLEWARE (Threat Detection) ---
+app.use(rateLimiter);
+app.use(sqlInjectionDetector);
 
-// Mount Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/admin/dashboard', adminDashboardRoutes);
-app.use('/api/orders', clientOrderRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/applications', orderRoutes); // Kept legacy path for Frontend compatibility
-app.use('/api/staff', staffRoutes); // New Staff Module
-app.use('/api/services', require('./src/shared/routes/serviceRoutes'));
-app.use('/api/courses', require('./src/shared/routes/courseRoutes'));
+// Set Static Folder for Uploads
+// --- FILES (Shared Secure View) ---
+app.use('/api/files/view', require('./src/shared/routes/file.routes'));
+
+// --- CLIENT MODULE ---
+app.use('/api/client/finance', require('./src/modules/client/finance/client.finance.routes'));
+app.use('/api/client/orders', require('./src/modules/client/orders/client.orders.routes'));
+app.use('/api/client/files', require('./src/modules/client/files/client.files.routes'));
+
+// --- STAFF MODULE ---
+app.use('/api/staff/dashboard', require('./src/modules/staff/dashboard/staff.dashboard.routes'));
+app.use('/api/staff/tasks', require('./src/modules/staff/tasks/staff.tasks.routes'));
+app.use('/api/staff/finance', require('./src/modules/staff/finance/staff.finance.routes'));
+
+// --- ADMIN MODULE ---
+app.use('/api/admin/workflow', require('./src/modules/admin/workflow/admin.workflow.routes'));
+app.use('/api/admin/finance', require('./src/modules/admin/finance/admin.finance.routes'));
+
+// --- SHARED PUBLIC APIs ---
+app.use('/api/services', require('./src/shared/routes/services.routes'));
+app.use('/api/courses', require('./src/shared/routes/courses.routes'));
+app.use('/api/auth', require('./src/modules/auth/auth.routes'));
 
 
 // Sample root route

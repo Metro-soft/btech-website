@@ -23,7 +23,7 @@ const applicationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['PENDING', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'PAID'],
+    enum: ['PENDING', 'ASSIGNED', 'IN_REVIEW', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'PAID'],
     default: 'PENDING'
   },
   timeline: [{
@@ -46,10 +46,10 @@ const applicationSchema = new mongoose.Schema({
     transactionId: String,
     isPaid: { type: Boolean, default: false },
     staffPay: { type: Number, default: 0 }, // Calculated earnings
-    commissionStatus: { 
-      type: String, 
-      enum: ['UNPAID', 'PAID', 'HELD'], 
-      default: 'UNPAID' 
+    commissionStatus: {
+      type: String,
+      enum: ['UNPAID', 'PAID', 'HELD'],
+      default: 'UNPAID'
     }
   },
   finalPrice: { type: Number }, // Dynamic price at purchase
@@ -62,12 +62,18 @@ const applicationSchema = new mongoose.Schema({
   adminNotes: {
     type: String
   },
+  // Detailed Staff Checklist
+  processingSteps: [{
+    step: { type: String, required: true },
+    completed: { type: Boolean, default: false },
+    completedAt: { type: Date }
+  }],
   // Interactive Flow
   clientAction: {
-     required: { type: Boolean, default: false },
-     type: { type: String, enum: ['OTP', 'TEXT', 'FILE'], default: 'OTP' },
-     message: { type: String }, // e.g., "Enter the OTP sent to your phone"
-     response: { type: String } // User's submitted data
+    required: { type: Boolean, default: false },
+    type: { type: String, enum: ['OTP', 'TEXT', 'FILE', 'text', 'file'], default: 'OTP' },
+    message: { type: String }, // e.g., "Enter the OTP sent to your phone"
+    response: { type: String } // User's submitted data
   },
   createdAt: {
     type: Date,

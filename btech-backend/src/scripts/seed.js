@@ -1,155 +1,131 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const Service = require('../shared/models/Service');
-const Course = require('../shared/models/Course');
-const path = require('path');
+const bcrypt = require('bcryptjs');
 
-// Try loading from default (cwd) or explicit path
-require('dotenv').config(); 
-// Fallback if that didn't work (e.g. separate process context)
-if (!process.env.MONGODB_URI) {
-  require('dotenv').config({ path: path.join(__dirname, '../../.env') });
-}
+// Models
+// Adjusted paths based on project structure
+const User = require('../shared/models/User');
+const Application = require('../shared/models/Application');
+const Transaction = require('../shared/models/Transaction');
 
-const services = [
-  // --- KRA SERVICES ---
-  {
-    title: 'File Returns',
-    category: 'KRA',
-    subcategory: 'Employment Returns',
-    description: 'File your annual employment returns (P9).',
-    requirements: ['KRA PIN', 'iTax Password', 'P9 Form'],
-    basePrice: 500,
-    tags: ['kra', 'p9', 'returns', 'tax']
-  },
-  {
-    title: 'File Nil Returns',
-    category: 'KRA',
-    subcategory: 'Nil Returns',
-    description: 'For those with no income to declare.',
-    requirements: ['KRA PIN', 'iTax Password'],
-    basePrice: 200,
-    tags: ['kra', 'nil', 'returns', 'zero']
-  },
-  {
-    title: 'New Personal PIN',
-    category: 'KRA',
-    subcategory: 'Registration',
-    description: 'Register for a new Personal KRA PIN.',
-    requirements: ['National ID Copy', 'Email', 'Phone'],
-    basePrice: 300,
-    tags: ['kra', 'pin', 'registration', 'new']
-  },
-  {
-    title: 'Tax Compliance Certificate',
-    category: 'KRA',
-    subcategory: 'Compliance',
-    description: 'Apply for a Tax Compliance Certificate (TCC).',
-    requirements: ['KRA PIN', 'iTax Password'],
-    basePrice: 500,
-    tags: ['kra', 'tcc', 'compliance', 'certificate']
-  },
-  
-  // --- HELB SERVICES ---
-  {
-    title: 'First Time Application',
-    category: 'HELB',
-    description: 'Apply for HELB loan for the first time.',
-    requirements: ['National ID', 'KCSE Result Slip', 'Passport Photo', 'Bank Account'],
-    basePrice: 500,
-    tags: ['helb', 'loan', 'first', 'university']
-  },
-  {
-    title: 'Subsequent Application',
-    category: 'HELB',
-    description: 'Apply for second or subsequent HELB loan.',
-    requirements: ['National ID', 'HELB Portal Password'],
-    basePrice: 300,
-    tags: ['helb', 'loan', 'subsequent', 'renewal']
-  },
+dotenv.config();
 
-  // --- ETA SERVICES ---
-  {
-    title: 'East Africa Tourist Visa',
-    category: 'ETA',
-    description: 'Single entry tourist visa for Kenya, Uganda, Rwanda.',
-    requirements: ['Passport', 'Photo', 'Itinerary'],
-    basePrice: 1000,
-    tags: ['eta', 'visa', 'tourist', 'travel']
-  },
-  {
-    title: 'Transit eTA',
-    category: 'ETA',
-    description: 'Authority to transit through Kenya (Max 72h).',
-    requirements: ['Passport', 'Flight Ticket'],
-    basePrice: 800,
-    tags: ['eta', 'visa', 'transit', 'travel']
-  }
-];
+const seedData = async () => {
+    try {
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log('🌱 MongoDB Connected...');
 
-const courses = [
-  {
-    code: '1266108',
-    title: 'Bachelor of Science (Computer Science)',
-    university: 'University of Nairobi',
-    clusterPoints: 42.5,
-    category: 'Degree',
-    description: 'Study software engineering, algorithms, and AI.',
-    instructor: '6578a1b2c3d4e5f678901234', // Placeholder ObjectId, will need a real user or leave dummy
-    price: 0
-  },
-  {
-    code: '1266109',
-    title: 'Bachelor of Medicine and Surgery',
-    university: 'University of Nairobi',
-    clusterPoints: 45.0,
-    category: 'Degree',
-    description: 'Train to become a medical doctor.',
-    instructor: '6578a1b2c3d4e5f678901234',
-    price: 0
-  },
-  {
-    code: '1266113',
-    title: 'Diploma in ICT',
-    university: 'Technical University of Kenya',
-    clusterPoints: 25.0,
-    category: 'Diploma',
-    description: 'Foundational skills in Information Technology.',
-    instructor: '6578a1b2c3d4e5f678901234',
-    price: 0
-  }
-];
+        // Clear existing data
+        await User.deleteMany({});
+        await Application.deleteMany({});
+        await Transaction.deleteMany({});
+        console.log('🗑️  Cleared existing data.');
 
-const seedDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('📦 Connected to MongoDB');
+        // 1. Create Users
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('password123', salt);
 
-    // Clear existing
-    await Service.deleteMany({});
-    await Course.deleteMany({});
-    console.log('🧹 Cleared existing data');
+        const adminUser = await User.create({
+            name: 'Super Admin',
+            email: 'admin@btech.com',
+            password: hashedPassword,
+            role: 'admin',
+            isOnline: true
+        });
 
-    // Insert Services
-    await Service.insertMany(services);
-    console.log(`✅ Seeded ${services.length} services`);
+        const staffUser = await User.create({
+            name: 'John Staff',
+            email: 'staff@btech.com',
+            password: hashedPassword,
+            role: 'staff',
+            isOnline: true,
+            currentLoad: 1
+        });
 
-    // Insert Courses (Hack: Need a valid user ID for instructor)
-    // We'll find the first user in DB or create a dummy objectId if allowed by schema
-    // Schema says required: true. Let's try to find an admin.
-    const admin = await mongoose.connection.collection('users').findOne({ role: 'admin' });
-    const instructorId = admin ? admin._id : new mongoose.Types.ObjectId();
+        const clientUser = await User.create({
+            name: 'Alice Client',
+            email: 'client@btech.com',
+            password: hashedPassword,
+            role: 'client',
+            walletBalance: 5000
+        });
 
-    const coursesWithInstructor = courses.map(c => ({ ...c, instructor: instructorId }));
-    await Course.insertMany(coursesWithInstructor);
-    console.log(`✅ Seeded ${courses.length} courses`);
+        console.log('👥 Users Created.');
 
-    console.log('🚀 Seeding complete');
-    process.exit(0);
-  } catch (err) {
-    console.error('❌ Seeding failed:', err);
-    process.exit(1);
-  }
+        // Helper to get date X days ago
+        const daysAgo = (days) => {
+            const d = new Date();
+            d.setDate(d.getDate() - days);
+            return d;
+        };
+
+        // 2. Create Historical Transactions (Last 7 Days)
+        const transactions = [];
+        const statuses = ['COMPLETED', 'PENDING', 'FAILED', 'COMPLETED', 'COMPLETED']; // Weighted towards complete
+        const categories = ['GENERAL', 'WITHDRAWAL', 'SERVICE_FEE', 'GENERAL'];
+
+        for (let i = 0; i < 40; i++) {
+            const dayOffset = i % 8; // 0 to 7 days
+            const isWithdrawal = i % 4 === 0; // 25% are withdrawals
+            const amount = isWithdrawal ? (500 + i * 50) : (1000 + i * 100);
+
+            transactions.push({
+                user: clientUser._id,
+                amount: amount,
+                type: isWithdrawal ? 'PAYMENT' : 'DEPOSIT', // Withdrawals are payments out
+                category: isWithdrawal ? 'WITHDRAWAL' : 'GENERAL',
+                status: statuses[i % statuses.length],
+                reference: `TXN-${1000 + i}`,
+                method: 'INTASEND',
+                description: isWithdrawal ? 'Withdrawal Request' : 'Wallet Deposit',
+                date: daysAgo(dayOffset),
+                created_at: daysAgo(dayOffset),
+                updated_at: daysAgo(dayOffset)
+            });
+        }
+        await Transaction.insertMany(transactions);
+        console.log(`💰 Created ${transactions.length} transactions.`);
+
+        // 3. Create Applications (Last 7 Days)
+        const appStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'APPROVED', 'PENDING'];
+        // Map rough statuses to valid schema enums
+        const getValidStatus = (s) => {
+            if (s === 'APPROVED') return 'COMPLETED';
+            if (s === 'REJECTED') return 'REJECTED';
+            return 'PENDING';
+        };
+
+        const applications = [];
+
+        for (let i = 0; i < 25; i++) {
+            const dayOffset = i % 7;
+            const rawStatus = appStatuses[i % appStatuses.length];
+
+            applications.push({
+                trackingNumber: `TRK-${Date.now()}-${i}`,
+                user: clientUser._id,
+                type: ['HELB', 'KRA', 'ETA', 'KUCCPS'][i % 4],
+                status: getValidStatus(rawStatus),
+                assignedTo: i % 2 === 0 ? staffUser._id : null,
+                payload: {
+                    serviceType: 'Standard Service',
+                    idNumber: `ID-${2000 + i}`
+                },
+                createdAt: daysAgo(dayOffset),
+                updatedAt: daysAgo(dayOffset)
+            });
+        }
+
+        await Application.insertMany(applications);
+        console.log(`📄 Created ${applications.length} applications.`);
+
+        console.log('✅ Seeding Completed Successfully.');
+        process.exit();
+
+    } catch (err) {
+        console.error('❌ Seeding Failed:', err);
+        process.exit(1);
+    }
 };
 
-seedDB();
+seedData();

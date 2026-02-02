@@ -1,26 +1,41 @@
 const mongoose = require('mongoose');
+require('./User'); // Ensure User model is registered (Mongoose Best Practice for populate)
 
-const auditLogSchema = new mongoose.Schema({
-  actor: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
+const AuditLogSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    // required: true // Optional for anonymous security logs
   },
-  
-  action: { 
-    type: String, 
-    required: true 
-  }, // e.g. "ASSIGN_TASK", "UPDATE_SETTINGS"
-  
-  target: { 
-    type: String 
-  }, // e.g. "Application #123"
-  
-  details: { 
-    type: mongoose.Schema.Types.Mixed 
-  }, // Old val vs New val
-  
-  ipAddress: { type: String }
-}, { timestamps: true });
+  buffer: {
+    type: String,
+    enum: ['db', 'cache', 'file'],
+    default: 'db'
+  },
+  topics: {
+    type: [String],
+    index: true
+  },
+  action: {
+    type: String,
+    // required: true, // Made optional for transition to 'topics'
+    enum: ['VIEW_DOCUMENT', 'DOWNLOAD_ORIGINAL', 'LOGIN', 'LOGOUT', 'STATUS_CHANGE', 'PAYMENT', 'ASSIGNMENT', 'CREATE', 'UPDATE', 'DELETE', 'WITHDRAWAL_APPROVAL']
+  },
+  resource: {
+    type: String, // Filename or Resource ID
+    required: true
+  },
+  metadata: {
+    type: Map,
+    of: mongoose.Schema.Types.Mixed // Flexible metadata
+  },
+  description: String,
+  ipAddress: String,
+  userAgent: String,
+  timestamp: {
+    type: Date,
+    default: Date.now
+  }
+});
 
-module.exports = mongoose.model('AuditLog', auditLogSchema);
+module.exports = mongoose.model('AuditLog', AuditLogSchema);

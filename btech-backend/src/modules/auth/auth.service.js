@@ -41,6 +41,16 @@ class AuthService {
             throw new Error('Invalid credentials');
         }
 
+        // Audit Log
+        const AuditService = require('../../shared/services/audit.service');
+        await AuditService.log({
+            userId: user._id,
+            topics: ['auth', 'login', 'info'],
+            message: `User ${user.name} logged in`,
+            resource: user.email,
+            buffer: 'db'
+        });
+
         return this._generateAuthResponse(user);
     }
 
@@ -50,6 +60,7 @@ class AuthService {
         if (data.email) fieldsToUpdate.email = data.email;
         if (data.phone) fieldsToUpdate.phone = data.phone;
         if (data.profilePicture) fieldsToUpdate.profilePicture = data.profilePicture;
+        if (data.staffDetails) fieldsToUpdate.staffDetails = data.staffDetails;
 
         if (data.password) {
             const salt = await bcrypt.genSalt(10);
@@ -69,9 +80,13 @@ class AuthService {
     }
 
     _generateAuthResponse(user) {
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET is not defined in environment variables');
+        }
+
         const token = jwt.sign(
             { id: user._id, role: user.role },
-            process.env.JWT_SECRET || 'fallback_secret', // Ideally use .env
+            process.env.JWT_SECRET,
             { expiresIn: '30d' }
         );
 
@@ -84,6 +99,50 @@ class AuthService {
             profilePicture: user.profilePicture, // Return pfp
             token,
         };
+    }
+    async getAllUsers(filters = {}) {
+        const query = {};
+        if (filters.role && filters.role !== 'All') {
+            query.role = filters.role.toLowerCase();
+        }
+        // Exclude password
+        return await User.find(query).select('-password').sort({ createdAt: -1 });
+    }
+
+    async createUser(data) {
+        // basic validation handled by controller/mongoose, but check email uniqueness
+        const existing = await User.findOne({ email: data.email });
+        if (existing) throw new Error('User already exists');
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(data.password, salt);
+
+        const user = await User.create({
+            ...data,
+            password: hashedPassword
+        });
+
+        return user;
+    }
+
+    async updateUser(id, data) {
+        const updates = { ...data };
+
+        // Hash password if updating
+        if (updates.password) {
+            const salt = await bcrypt.genSalt(10);
+            updates.password = await bcrypt.hash(updates.password, salt);
+        }
+
+        const user = await User.findByIdAndUpdate(id, updates, { new: true }).select('-password');
+        if (!user) throw new Error('User not found');
+        return user;
+    }
+
+    async deleteUser(id) {
+        const user = await User.findByIdAndDelete(id);
+        if (!user) throw new Error('User not found');
+        return { message: 'User deleted successfully' };
     }
 }
 

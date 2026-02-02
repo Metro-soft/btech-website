@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/network/application_service.dart';
@@ -326,16 +327,19 @@ class _KRAServiceFormState extends State<KRAServiceForm> {
     if (!_formKey.currentState!.validate()) return;
 
     // Specific Validation
-    if (widget.service['subtype'] == 'Employment' && _attachedFile == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('P9 Form Required')));
+    final subcategory = widget.service['subcategory'] ?? '';
+    if (subcategory.contains('Employment') && _attachedFile == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('P9 Form Required')));
+      }
       return;
     }
 
     setState(() => _isLoading = true);
     try {
       final payload = {
-        'serviceType': 'KRA - ${widget.service['name']}',
+        'serviceType': 'KRA - ${widget.service['title']}',
         'details': {
           'kraPin': _kraPinController.text,
           'idNumber': _idController.text,
@@ -343,7 +347,7 @@ class _KRAServiceFormState extends State<KRAServiceForm> {
           'email': _emailController.text,
           'phone': _phoneController.text,
           'year': _yearController.text,
-          'subtype': widget.service['subtype'],
+          'subtype': subcategory,
         },
         'documents': {'attachment': _attachedFile}
       };
@@ -351,11 +355,17 @@ class _KRAServiceFormState extends State<KRAServiceForm> {
       final result =
           await _serviceApi.submitApplication(type: 'KRA', payload: payload);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Submitted! Redirecting to payment...')));
-        context.go('/checkout/${result['_id']}');
-      }
+      if (!mounted) return;
+
+      result.fold(
+        (failure) => ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: ${failure.message}'))),
+        (data) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Submitted! Redirecting to payment...')));
+          context.go('/checkout/${data['_id']}');
+        },
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -368,12 +378,14 @@ class _KRAServiceFormState extends State<KRAServiceForm> {
 
   @override
   Widget build(BuildContext context) {
+    final title = widget.service['title'] ?? 'Service';
+    final subcategory = widget.service['subcategory'] ?? '';
+
     return Scaffold(
       backgroundColor: const Color(0xFF021024),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: Text(widget.service['name'],
-            style: const TextStyle(color: Colors.white)),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
         leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: widget.onBack),
@@ -410,27 +422,30 @@ class _KRAServiceFormState extends State<KRAServiceForm> {
               const SizedBox(height: 24),
 
               // Dynamic Fields based on Service Type
-              if (widget.service['type'] == 'New PIN') ...[
+              if (subcategory.contains('Registration') ||
+                  title.contains('New')) ...[
                 _buildField(_idController, 'National ID', isNumeric: true),
                 _buildField(_emailController, 'Email Address'),
                 _buildField(_phoneController, 'Phone Number', isNumeric: true),
                 const SizedBox(height: 12),
                 _buildUploadField('Upload ID Copy/Certificate'),
-              ] else if (widget.service['type'] == 'File Returns') ...[
+              ] else if (subcategory.contains('Returns') ||
+                  title.contains('Returns')) ...[
                 _buildField(_kraPinController, 'KRA PIN'),
                 _buildField(_passwordController, 'iTax Password',
                     obscureText: true),
                 _buildField(_yearController, 'Return Year', isNumeric: true),
                 const SizedBox(height: 12),
-                if (widget.service['subtype'] == 'Employment')
+                if (subcategory.contains('Employment'))
                   _buildUploadField('Upload P9 Form'),
-              ] else if (widget.service['type'] == 'Compliance') ...[
+              ] else if (subcategory.contains('Compliance') ||
+                  title.contains('Compliance')) ...[
                 _buildField(_kraPinController, 'KRA PIN'),
                 _buildField(_passwordController, 'iTax Password',
                     obscureText: true),
                 _buildField(_emailController, 'Email to receive Certificate'),
               ] else ...[
-                // Recovery
+                // Recovery/Other
                 _buildField(_kraPinController, 'KRA PIN (If known)'),
                 _buildField(_idController, 'National ID'),
                 _buildField(_emailController, 'Email Address'),

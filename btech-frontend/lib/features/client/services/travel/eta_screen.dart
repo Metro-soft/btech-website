@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/network/application_service.dart';
 
@@ -243,12 +244,19 @@ class _ETAApplicationFormState extends State<ETAApplicationForm> {
       final result =
           await _service.submitApplication(type: 'ETA', payload: payload);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Submitted! Redirecting to payment...')),
-        );
-        context.go('/checkout/${result['_id']}');
-      }
+      if (!mounted) return;
+
+      result.fold(
+        (failure) => ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: ${failure.message}'))),
+        (data) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Submitted! Redirecting to payment...')),
+          );
+          context.go('/checkout/${data['_id']}');
+        },
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

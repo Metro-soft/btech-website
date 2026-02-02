@@ -61,3 +61,44 @@ exports.updateProfile = async (req, res) => {
     res.status(statusCode).json({ message: err.message });
   }
 };
+
+// @desc    Get All Users (Admin)
+exports.getAllUsers = async (req, res) => {
+  try {
+    const filters = req.query; // role=staff etc.
+    const users = await authService.getAllUsers(filters);
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Create User (Admin)
+exports.createUser = async (req, res) => {
+  try {
+    const user = await authService.createUser(req.body);
+    res.status(201).json(user);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// @desc    Update User (Admin)
+exports.updateUser = async (req, res) => {
+  try {
+    const user = await authService.updateUser(req.params.id, req.body);
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// @desc    Delete User (Admin)
+exports.deleteUser = async (req, res) => {
+  try {
+    const result = await authService.deleteUser(req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
