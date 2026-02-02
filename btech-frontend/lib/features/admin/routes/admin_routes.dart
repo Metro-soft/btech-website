@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../dashboard/admin_dashboard_screen.dart';
 import '../profile/admin_profile_screen.dart';
 import '../users/user_management_screen.dart';
+import '../users/user_detail_screen.dart';
 import '../settings/feature_management_screen.dart';
 import '../services/admin_service_management_screen.dart';
 import '../dashboard/admin_layout.dart';
@@ -40,9 +41,16 @@ final List<RouteBase> adminRoutes = [
         builder: (context, state) => const AdminDashboardScreen(),
       ),
       GoRoute(
-        path: '/admin/users',
-        builder: (context, state) => const UserManagementScreen(),
-      ),
+          path: '/admin/users',
+          builder: (context, state) => const UserManagementScreen(),
+          routes: [
+            GoRoute(
+                path: 'details',
+                builder: (context, state) {
+                  final user = state.extra as Map<String, dynamic>;
+                  return UserDetailScreen(user: user);
+                })
+          ]),
       GoRoute(
         path: '/admin/finance',
         builder: (context, state) => const PlaceholderScreen('Finance & Audit'),

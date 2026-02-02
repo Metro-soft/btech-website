@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../shared/admin_theme.dart';
-import '../dashboard/admin_layout.dart';
 
 class UserDetailScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -42,70 +41,68 @@ class _UserDetailScreenState extends State<UserDetailScreen>
         ? widget.user['createdAt'].toString().substring(0, 10)
         : 'N/A';
 
-    return AdminLayout(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. BACK BUTTON & BREADCRUMBS
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                onPressed: () => context.pop(),
-              ),
-              const Text("Users / ", style: TextStyle(color: Colors.white38)),
-              Text("$id - $name",
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. BACK BUTTON & BREADCRUMBS
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white70),
+              onPressed: () => context.pop(),
+            ),
+            const Text("Users / ", style: TextStyle(color: Colors.white38)),
+            Text("$id - $name",
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
+          ],
+        ),
+
+        const SizedBox(height: 20),
+
+        // 2. HEADER CARD (The MetroNet "Identity" Section)
+        _buildHeaderCard(name, id, role, isActive),
+
+        const SizedBox(height: 25),
+
+        // 3. TABS (Glassmorphic Style)
+        Container(
+          height: 45,
+          decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.white12))),
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            indicatorColor: AdminTheme.primaryAccent,
+            indicatorWeight: 3,
+            labelColor: AdminTheme.primaryAccent,
+            unselectedLabelColor: Colors.white60,
+            labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            dividerColor: Colors.transparent,
+            tabs: const [
+              Tab(text: "General Information"),
+              Tab(text: "Applications"),
+              Tab(text: "Payments"),
+              Tab(text: "Notifications"),
             ],
           ),
+        ),
 
-          const SizedBox(height: 20),
+        const SizedBox(height: 20),
 
-          // 2. HEADER CARD (The MetroNet "Identity" Section)
-          _buildHeaderCard(name, id, role, isActive),
-
-          const SizedBox(height: 25),
-
-          // 3. TABS (Glassmorphic Style)
-          Container(
-            height: 45,
-            decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white12))),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              indicatorColor: AdminTheme.primaryAccent,
-              indicatorWeight: 3,
-              labelColor: AdminTheme.primaryAccent,
-              unselectedLabelColor: Colors.white60,
-              labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-              dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: "General Information"),
-                Tab(text: "Applications"),
-                Tab(text: "Payments"),
-                Tab(text: "Notifications"),
-              ],
-            ),
+        // 4. TAB CONTENT AREA
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildGeneralInfoTab(name, id, email, phone, role, createdAt),
+              _buildPlaceholderTab("Applications List"),
+              _buildPlaceholderTab("Transaction History"),
+              _buildPlaceholderTab("System Notifications"),
+            ],
           ),
-
-          const SizedBox(height: 20),
-
-          // 4. TAB CONTENT AREA
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildGeneralInfoTab(name, id, email, phone, role, createdAt),
-                _buildPlaceholderTab("Applications List"),
-                _buildPlaceholderTab("Transaction History"),
-                _buildPlaceholderTab("System Notifications"),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -211,7 +208,7 @@ class _UserDetailScreenState extends State<UserDetailScreen>
                   ),
                   child: Row(
                     children: const [
-                      const Text("Actions",
+                      Text("Actions",
                           style: TextStyle(
                               color: AdminTheme.background,
                               fontWeight: FontWeight.bold)),
