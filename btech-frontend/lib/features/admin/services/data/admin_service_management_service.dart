@@ -8,7 +8,7 @@ class AdminServiceManagementService {
 
   // GET all services
   Future<List<dynamic>> getAllServices() async {
-    final url = Uri.parse('${AuthService.baseUrl}/services');
+    final url = Uri.parse('${AuthService.rootUrl}/services');
     // Services might be public, but let's send auth just in case or if logic changes
     final response = await http.get(url);
 
@@ -24,7 +24,7 @@ class AdminServiceManagementService {
     final token = await _storage.read(key: 'token');
     if (token == null) throw Exception('No auth token found');
 
-    final url = Uri.parse('${AuthService.baseUrl}/services');
+    final url = Uri.parse('${AuthService.rootUrl}/services');
     final response = await http.post(
       url,
       headers: {
@@ -45,7 +45,7 @@ class AdminServiceManagementService {
     final token = await _storage.read(key: 'token');
     if (token == null) throw Exception('No auth token found');
 
-    final url = Uri.parse('${AuthService.baseUrl}/services/$id');
+    final url = Uri.parse('${AuthService.rootUrl}/services/$id');
     final response = await http.put(
       url,
       headers: {
@@ -65,7 +65,7 @@ class AdminServiceManagementService {
     final token = await _storage.read(key: 'token');
     if (token == null) throw Exception('No auth token found');
 
-    final url = Uri.parse('${AuthService.baseUrl}/services/$id');
+    final url = Uri.parse('${AuthService.rootUrl}/services/$id');
     final response = await http.delete(
       url,
       headers: {
