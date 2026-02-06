@@ -78,4 +78,32 @@ class AdminServiceManagementService {
       throw Exception('Failed to delete service: ${response.body}');
     }
   }
+
+  // AI Generate Full Service
+  Future<Map<String, dynamic>> generateFullService(
+      {required String title,
+      required String category,
+      String? userPrompt}) async {
+    final token = await _storage.read(key: 'token');
+    if (token == null) throw Exception('No auth token found');
+
+    final url = Uri.parse('${AuthService.rootUrl}/ai/generate-service-full');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode(
+          {'title': title, 'category': category, 'userPrompt': userPrompt}),
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse['success'] == true) {
+        return jsonResponse['data'];
+      }
+    }
+    throw Exception('Failed to generate service details: ${response.body}');
+  }
 }

@@ -13,13 +13,19 @@ class AuthService {
   // Dynamic Base URL
   // Dynamic Base URL
   static String get _rootUrl {
-    if (kIsWeb) return 'http://172.31.235.222:5000/api';
+    // For Web, localhost is the most reliable if backend is on same machine
+    if (kIsWeb) return 'http://localhost:5000/api';
     try {
-      if (Platform.isAndroid) return 'http://172.31.235.222:5000/api';
+      // For Android Emulator (Standard)
+      // if (Platform.isAndroid && 'some check for emulator') return 'http://10.0.2.2:5000/api';
+
+      // For Physical Device (Current Local IP)
+      if (Platform.isAndroid) return 'http://192.168.100.86:5000/api';
     } catch (e) {
       // Platform check might fail in some edge cases
     }
-    return 'http://172.31.235.222:5000/api';
+    // Fallback
+    return 'http://localhost:5000/api';
   }
 
   static String get rootUrl => _rootUrl;

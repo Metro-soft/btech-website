@@ -24,6 +24,19 @@ class _FormBuilderWidgetState extends State<FormBuilderWidget> {
     _fields = List.from(widget.initialFields);
   }
 
+  @override
+  void didUpdateWidget(FormBuilderWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Deep comparison or simple length check to avoid unnecessary rebuilds?
+    // Since AI replaces the whole list, reference check might be enough if parent creates new list.
+    // However, since we sync back to parent on change, parent and child might be in sync.
+    // We only want to force update if the parent has a *different* list than we do (e.g. AI overwrote it).
+    // Simple approach: Always sync if reference is different.
+    if (widget.initialFields != oldWidget.initialFields) {
+      _fields = List.from(widget.initialFields);
+    }
+  }
+
   void _addField() {
     setState(() {
       _fields.add({

@@ -112,3 +112,88 @@ exports.generateTemplate = async (req, res) => {
         res.status(500).json({ message: 'AI Generation failed', error: error.message });
     }
 };
+
+// @desc    Generate full service details (Description, Requirements, Form)
+// @route   POST /api/ai/generate-service-full
+exports.generateFullServiceDetails = async (req, res) => {
+    try {
+        const { title, category, userPrompt } = req.body;
+
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(500).json({ message: 'Gemini API Key is missing.' });
+        }
+
+        // Use user's custom prompt if provided, otherwise default to title-based generation
+        const coreInstruction = userPrompt
+            ? `Task: Create a complete service definition based on this request: "${userPrompt}".`
+            : `Task: Create a complete service definition for a service named "${title}".`;
+
+        const prompt = `
+            Act as a Senior Business Analyst and System Architect.
+            ${coreInstruction}
+            
+            Return STRICT JSON object with the following structure:
+            {
+                "title": "A short, clear, professional Service Name (e.g. 'KRA Tax Returns')",
+                "category": "One of: ['KRA', 'HELB', 'Banking', 'ETA', 'KUCCPS', 'OTHER']",
+                "layoutType": "One of: ['classic', 'compact', 'wizard', 'accordion', 'stepper']",
+                "description": "A professional, attractive 2-3 sentence description of functionality.",
+                "requirements": ["List of strings of required documents/items from the client"],
+                "basePrice": 0,
+                "formStructure": [
+                    {
+                        "type": "text | number | date | file | dropdown | checkbox | section",
+                        "label": "Human readable label",
+                        "name": "camelCaseName",
+                        "required": true,
+                        "options": ["Option 1", "Option 2"] // Only for dropdown
+                    }
+                ]
+            }
+
+            Example Response for "Visa Application":
+            {
+                "title": "International Visa Assistance",
+                "category": "ETA",
+                "layoutType": "wizard",
+                "description": "Comprehensive visa application assistance service.",
+                "requirements": ["Original Passport", "Passport Photos"],
+                "basePrice": 5000,
+                "formStructure": [
+                    { "type": "section", "label": "Personal Details", "name": "section_personal" },
+                    { "type": "text", "label": "Full Name", "name": "fullName", "required": true },
+                    { "type": "date", "label": "Date of Birth", "name": "dob", "required": true },
+                    { "type": "section", "label": "Travel Info", "name": "section_travel" },
+                    { "type": "dropdown", "label": "Visa Type", "name": "visaType", "options": ["Tourist", "Business"], "required": true }
+                ]
+            }
+
+            Rules:
+            1. Analyze the input to determine the best "category".
+            2. Choose the best "layoutType" based on the complexity.
+            3. "formStructure" MUST contain at least 3-5 fields relevant to the service. DO NOT return an empty list.
+            4. Use correct "type" from the list provided.
+            5. "name" keys must be unique.
+            6. Do NOT wrap result in markdown codes. Just raw JSON.
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        let text = response.text();
+
+        // Cleanup
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        const generatedData = JSON.parse(text);
+
+        res.json({
+            success: true,
+            data: generatedData
+        });
+
+    } catch (error) {
+        console.error("Gemini Full Service Gen Error:", error);
+        res.status(500).json({ message: 'AI Generation failed', error: error.message });
+    }
+};
+

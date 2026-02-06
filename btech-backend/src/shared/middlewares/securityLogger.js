@@ -27,8 +27,9 @@ const rateLimiter = rateLimit({
 });
 
 // 2. SQL Injection Detector (Basic Pattern Matching)
-// Patterns: UNION SELECT, DROP TABLE, OR 1=1, --
-const sqlInjectionPattern = /(\b(UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER)\b)|(' OR ')|(1=1)|(--)/i;
+// Refined Pattern: Only look for very specific SQL injection signatures, avoiding common words like 'SELECT' or 'INSERT' in isolation.
+// Matches: "UNION SELECT", "DROP TABLE", "OR 1=1"
+const sqlInjectionPattern = /(\b(UNION\s+SELECT|DROP\s+TABLE|ALTER\s+TABLE)\b)|(\'\s+OR\s+\')|(\s+OR\s+1=1)|(\s+--\s+)/i;
 
 const sqlInjectionDetector = async (req, res, next) => {
     try {

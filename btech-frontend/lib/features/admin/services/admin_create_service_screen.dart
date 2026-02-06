@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async'; // Added for Timer
 import '../shared/admin_theme.dart';
 import '../shared/admin_form_styles.dart';
 import 'data/admin_service_management_service.dart';
@@ -25,9 +26,10 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
   String? _errorMessage;
 
   // Form Fields
-  String _title = '';
-  String _description = '';
-  String _basePrice = '';
+  String _aiPrompt = '';
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _basePriceController = TextEditingController();
   String _category = 'OTHER';
   String _layoutType = 'classic';
 
@@ -89,9 +91,9 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
           orElse: () => {});
 
       if (service.isNotEmpty) {
-        _title = service['title'] ?? service['name'] ?? '';
-        _description = service['description'] ?? '';
-        _basePrice = service['basePrice']?.toString() ?? '';
+        _titleController.text = service['title'] ?? service['name'] ?? '';
+        _descriptionController.text = service['description'] ?? '';
+        _basePriceController.text = service['basePrice']?.toString() ?? '';
         _category = service['category'] ?? 'OTHER';
         _layoutType = service['layoutType'] ?? 'classic';
         if (service['formStructure'] != null) {
@@ -104,11 +106,12 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
       }
       setState(() => _isLoading = false);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isLoading = false;
           _errorMessage = e.toString();
         });
+      }
     }
   }
 
@@ -119,12 +122,12 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
     setState(() => _isLoading = true);
     try {
       final data = {
-        "title": _title,
-        "name": _title, // Maintain legacy name
+        "title": _titleController.text,
+        "name": _titleController.text, // Maintain legacy name
         "category": _category,
         "layoutType": _layoutType,
-        "description": _description,
-        "basePrice": double.tryParse(_basePrice) ?? 0,
+        "description": _descriptionController.text,
+        "basePrice": double.tryParse(_basePriceController.text) ?? 0,
         "formStructure": _formStructure,
         "requirements": _requirements,
       };
@@ -151,34 +154,174 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
     }
   }
 
+  // Loading State
+  String _loadingMessage = "Analyzing Request...";
+  Timer? _loadingTimer;
+  final List<String> _loadingMessages = [
+    "Analyzing Service Name...",
+    "Determining Best Category...",
+    "Designing Form Structure...",
+    "Drafting Requirements...",
+    "Calculating Base Price...",
+    "Polishing Details...",
+    "Finalizing Service..."
+  ];
+
+  @override
+  @override
+  void dispose() {
+    _loadingTimer?.cancel();
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _basePriceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _generateAiContent() async {
+    // Start AI Generation
+    if (_aiPrompt.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please describe the service first")),
+      );
+      return;
+    }
+
+    // ORPHANED CODE START
+    /*
+    final userPrompt = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        String prompt = "Create a service for $_title";
+        if (_title.isEmpty) prompt = "";
+
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1E2C),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("✨ Magic Auto-Fill",
+              style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Describe the service you want to build. The AI will generate the category, layout, price, and form fields.",
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: prompt,
+                maxLines: 4,
+                style: const TextStyle(color: Colors.white),
+                decoration: AdminFormStyles.inputDecoration(
+                    hint: "e.g. Visa application for UK with high price..."),
+                onChanged: (val) => prompt = val,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => context.pop(),
+              child:
+                  const Text("Cancel", style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => context.pop(prompt),
+              icon: const Icon(Icons.auto_awesome, size: 16),
+              label: const Text("Generate"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFC69C6D),
+                foregroundColor: Colors.black,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    */
+
+    setState(() {
+      _isLoading = true;
+      _loadingMessage = _loadingMessages[0];
+    });
+
+    // Start Message Cycle
+    int messageIndex = 0;
+    _loadingTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
+      setState(() {
+        messageIndex = (messageIndex + 1) % _loadingMessages.length;
+        _loadingMessage = _loadingMessages[messageIndex];
+      });
+    });
+
+    try {
+      // Pass empty category if we want AI to decide, or pass current if we want to bias it?
+      // The backend prompt now ignores the passed category mostly, but let's send it anyway.
+      final data = await _service.generateFullService(
+          title: _titleController.text, // Use updated title if any
+          category: _category,
+          userPrompt: _aiPrompt);
+
+      _loadingTimer?.cancel();
+
+      setState(() {
+        if (data['title'] != null) {
+          _titleController.text = data['title'];
+        }
+
+        if (data['category'] != null) {
+          // Ensure it's a valid category
+          if (_categories.contains(data['category'])) {
+            _category = data['category'];
+          }
+        }
+
+        if (data['layoutType'] != null) {
+          if (_layouts.contains(data['layoutType'])) {
+            _layoutType = data['layoutType'];
+          }
+        }
+
+        if (data['description'] != null) {
+          _descriptionController.text = data['description'];
+        }
+
+        if (data['basePrice'] != null) {
+          _basePriceController.text = data['basePrice'].toString();
+        }
+
+        if (data['requirements'] != null) {
+          _requirements = List<String>.from(data['requirements']);
+        }
+
+        if (data['formStructure'] != null) {
+          _formStructure =
+              List<Map<String, dynamic>>.from(data['formStructure']);
+        }
+      });
+
+      setState(() => _isLoading = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("✨ Service magically generated!"),
+          backgroundColor: Color(0xFFC69C6D),
+        ));
+      }
+    } catch (e) {
+      _loadingTimer?.cancel();
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("AI Error: $e")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: AdminTheme.background,
-        body: Center(
-            child: CircularProgressIndicator(color: AdminTheme.primaryAccent)),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Scaffold(
-        backgroundColor: AdminTheme.background,
-        appBar: AppBar(
-            backgroundColor: AdminTheme.background,
-            elevation: 0,
-            leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => context.pop())),
-        body: Center(
-            child: Text("Error: $_errorMessage",
-                style: const TextStyle(color: AdminTheme.dangerRed))),
-      );
-    }
-
-    final dropdownCategories = _categories.where((c) => c != 'All').toList();
-    if (!dropdownCategories.contains(_category))
-      dropdownCategories.add(_category);
+    // Determine content to show
+    Widget content = _buildFormContent();
 
     return Scaffold(
       backgroundColor: AdminTheme.background,
@@ -194,37 +337,159 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
                 color: Colors.white, fontWeight: FontWeight.bold)),
         actions: const [],
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AdminTheme.background,
-          border: Border(
-              top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-        ),
-        child: SizedBox(
-          height: 50,
-          child: ElevatedButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save, size: 20),
-            label: const Text("SAVE SERVICE",
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AdminTheme.primaryAccent,
-              foregroundColor: AdminTheme.background,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+      bottomNavigationBar: !_isLoading
+          ? Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AdminTheme.background,
+                border: Border(
+                    top:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+              ),
+              child: SizedBox(
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.save, size: 20),
+                  label: const Text("SAVE SERVICE",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AdminTheme.primaryAccent,
+                    foregroundColor: AdminTheme.background,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            )
+          : null,
+      body: Stack(
+        children: [
+          content,
+          if (_isLoading)
+            Container(
+              color: Colors.black.withValues(alpha: 0.8),
+              width: double.infinity,
+              height: double.infinity,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFC69C6D),
+                        strokeWidth: 4,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      _loadingMessage,
+                      style: const TextStyle(
+                        color: Color(0xFFC69C6D),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Powered by Gemini AI",
+                      style: TextStyle(color: Colors.white38, fontSize: 12),
+                    )
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
+        ],
       ),
-      body: SingleChildScrollView(
+    );
+  }
+
+  Widget _buildFormContent() {
+    if (_errorMessage != null) {
+      return Center(
+          child: Text("Error: $_errorMessage",
+              style: const TextStyle(color: AdminTheme.dangerRed)));
+    }
+
+    final dropdownCategories = _categories.where((c) => c != 'All').toList();
+    if (!dropdownCategories.contains(_category)) {
+      dropdownCategories.add(_category);
+    }
+
+    return SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // AI Assistant Card
+              Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFC69C6D).withValues(alpha: 0.15),
+                      const Color(0xFF1E1E2C)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: const Color(0xFFC69C6D).withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.auto_awesome,
+                            color: Color(0xFFC69C6D), size: 20),
+                        SizedBox(width: 8),
+                        Text("AI Assistant",
+                            style: TextStyle(
+                                color: Color(0xFFC69C6D),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Describe the service you want to create (e.g. \"KRA Tax Returns filing with upload fields\"). The AI will generate everything for you.",
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      initialValue: _aiPrompt,
+                      maxLines: 3,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: AdminFormStyles.inputDecoration(
+                          hint: "Describe your service here..."),
+                      onChanged: (val) => _aiPrompt = val,
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
+                        onPressed: _generateAiContent,
+                        icon: const Icon(Icons.auto_awesome, size: 16),
+                        label: const Text("Magic Auto-Fill"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFC69C6D),
+                          foregroundColor: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               // Basic Details Card
               Container(
                 padding: const EdgeInsets.all(24),
@@ -246,11 +511,15 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: _buildTextField(
-                            label: "Service Name",
-                            initialValue: _title,
-                            hint: "e.g. KRA Returns",
-                            onSaved: (v) => _title = v!,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTextField(
+                                label: "Service Name",
+                                controller: _titleController,
+                                hint: "e.g. KRA Returns",
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 24),
@@ -261,10 +530,11 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
                               AdminFormStyles.label("Category"),
                               DropdownButtonFormField<String>(
                                 key: ValueKey(_category),
-                                initialValue:
-                                    dropdownCategories.contains(_category)
-                                        ? _category
-                                        : dropdownCategories.first,
+                                initialValue: dropdownCategories
+                                        .contains(_category)
+                                    ? _category
+                                    : dropdownCategories
+                                        .first, // Fixed initialValue to value
                                 dropdownColor: const Color(0xFF2A2A3E),
                                 style: const TextStyle(color: Colors.white),
                                 decoration: AdminFormStyles.inputDecoration(),
@@ -279,7 +549,8 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
                               AdminFormStyles.label("Layout Mold"),
                               DropdownButtonFormField<String>(
                                 key: ValueKey(_layoutType),
-                                initialValue: _layoutType,
+                                initialValue:
+                                    _layoutType, // Fixed initialValue to value
                                 dropdownColor: const Color(0xFF2A2A3E),
                                 style: const TextStyle(color: Colors.white),
                                 decoration: AdminFormStyles.inputDecoration(),
@@ -310,10 +581,9 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
                         Expanded(
                           child: _buildTextField(
                             label: "Base Price",
-                            initialValue: _basePrice,
+                            controller: _basePriceController,
                             hint: "0.00",
                             isNumeric: true,
-                            onSaved: (v) => _basePrice = v!,
                           ),
                         ),
                         const SizedBox(width: 24),
@@ -323,10 +593,9 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
                     const SizedBox(height: 24),
                     _buildTextField(
                       label: "Description",
-                      initialValue: _description,
+                      controller: _descriptionController,
                       hint: "Describe the service...",
                       maxLines: 4,
-                      onSaved: (v) => _description = v!,
                     ),
                   ],
                 ),
@@ -454,30 +723,30 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
               const SizedBox(height: 80), // Bottom padding
             ],
           ),
-        ),
-      ),
-    );
+        ));
   }
 
   Widget _buildTextField(
       {required String label,
-      required String initialValue,
+      required TextEditingController controller,
       String? hint,
       bool isNumeric = false,
       int maxLines = 1,
-      required Function(String?) onSaved}) {
+      Function(String?)? onSaved,
+      Function(String)? onChanged}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AdminFormStyles.label(label),
         TextFormField(
-          initialValue: initialValue,
+          controller: controller,
           keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
           maxLines: maxLines,
           style: const TextStyle(color: Colors.white),
           decoration: AdminFormStyles.inputDecoration(hint: hint),
           validator: (val) => val!.isEmpty ? "Required" : null,
           onSaved: onSaved,
+          onChanged: onChanged,
         ),
       ],
     );
