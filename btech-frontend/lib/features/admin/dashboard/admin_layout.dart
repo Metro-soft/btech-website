@@ -113,10 +113,22 @@ class _AdminLayoutState extends State<AdminLayout> {
                   onTap: () => context.go('/admin/services'),
                 ),
                 _SidebarItem(
+                  icon: Icons.notifications_none_outlined,
+                  label: "Notifications",
+                  isActive: activeRoute.startsWith('/admin/notifications'),
+                  onTap: () => context.go('/admin/notifications'),
+                ),
+                _SidebarItem(
                   icon: Icons.settings_outlined,
                   label: "Settings",
                   isActive: activeRoute.startsWith('/admin/settings'),
                   onTap: () => context.go('/admin/settings'),
+                ),
+                _SidebarItem(
+                  icon: Icons.security_outlined,
+                  label: "System Logs",
+                  isActive: activeRoute.startsWith('/admin/audit'),
+                  onTap: () => context.go('/admin/audit'),
                 ),
 
                 const Spacer(),

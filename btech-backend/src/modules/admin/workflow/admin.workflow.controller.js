@@ -6,9 +6,11 @@ const AuditService = require('../../../shared/services/audit.service');
 // @route   GET /api/admin/workflow/applications
 exports.getAllApplications = async (req, res) => {
     try {
-        const { status } = req.query;
+        const { status, user, staffId } = req.query;
         let query = {};
         if (status) query.status = status;
+        if (user) query.user = user;
+        if (staffId) query['assignedTo'] = staffId;
 
         const applications = await Application.find(query)
             .select('-payload')

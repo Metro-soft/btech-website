@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/network/application_service.dart';
 
-class ClientSidebar extends StatelessWidget {
+class ClientSidebar extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemSelected;
   final bool isCollapsed;
@@ -15,23 +16,75 @@ class ClientSidebar extends StatelessWidget {
   });
 
   @override
+  State<ClientSidebar> createState() => _ClientSidebarState();
+}
+
+class _ClientSidebarState extends State<ClientSidebar> {
+  final ApplicationService _api = ApplicationService();
+  List<Map<String, dynamic>> _services = [];
+  Set<String> _categories = {};
+  bool _isLoading = true;
+
+  // Route mapping for simplified navigation
+  final Map<String, String> _categoryRoutes = {
+    'KRA': '/cyber/kra',
+    'HELB': '/cyber/helb',
+    'KUCCPS': '/cyber/kuccps',
+    'Travel': '/eta',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchServices();
+  }
+
+  Future<void> _fetchServices() async {
+    try {
+      final services = await _api.getServices();
+      if (mounted) {
+        setState(() {
+          _services = services;
+          _categories =
+              services.map((s) => s['category'] as String? ?? 'Other').toSet();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _navigateToCategory(String category) {
+    if (_categoryRoutes.containsKey(category)) {
+      context.go(_categoryRoutes[category]!);
+    } else {
+      // Navigate to Home with category filter
+      context.go('/?category=$category');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     const cardColor = Color(0xFF052659);
     const highlightColor = Color(0xFFC1E8FF);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      width: isCollapsed ? 80 : 250,
+      width: widget.isCollapsed ? 80 : 250,
       color: cardColor,
       child: Column(
         children: [
           // Header / Logo Area
           Container(
             padding: EdgeInsets.symmetric(
-                horizontal: isCollapsed ? 12 : 24, vertical: 32),
-            alignment: isCollapsed ? Alignment.center : Alignment.centerLeft,
+                horizontal: widget.isCollapsed ? 12 : 24, vertical: 32),
+            alignment:
+                widget.isCollapsed ? Alignment.center : Alignment.centerLeft,
             child: Row(
-              mainAxisAlignment: isCollapsed
+              mainAxisAlignment: widget.isCollapsed
                   ? MainAxisAlignment.center
                   : MainAxisAlignment.start,
               children: [
@@ -43,7 +96,7 @@ class ClientSidebar extends StatelessWidget {
                   ),
                   child: const Icon(Icons.business, color: Color(0xFF021024)),
                 ),
-                if (!isCollapsed) ...[
+                if (!widget.isCollapsed) ...[
                   const SizedBox(width: 12),
                   Text(
                     'BTECH',
@@ -59,7 +112,8 @@ class ClientSidebar extends StatelessWidget {
 
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: isCollapsed ? 8 : 16),
+              padding:
+                  EdgeInsets.symmetric(horizontal: widget.isCollapsed ? 8 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -68,11 +122,11 @@ class ClientSidebar extends StatelessWidget {
                     index: 0,
                     icon: Icons.dashboard_outlined,
                     label: 'Dashboard',
-                    isSelected: selectedIndex == 0,
+                    isSelected: widget.selectedIndex == 0,
                   ),
 
                   // Services Dropdown or Icon
-                  if (isCollapsed)
+                  if (widget.isCollapsed)
                     _buildCollapsedServicesItem(context, highlightColor)
                   else
                     Theme(
@@ -97,12 +151,35 @@ class ClientSidebar extends StatelessWidget {
                         childrenPadding: const EdgeInsets.only(left: 16),
                         collapsedIconColor: Colors.white70,
                         iconColor: highlightColor,
-                        children: [
-                          _buildSubItem(context, 'KRA Services', '/cyber/kra'),
-                          _buildSubItem(context, 'KUCCPS', '/cyber/kuccps'),
-                          _buildSubItem(context, 'HELB Loan', '/cyber/helb'),
-                          _buildSubItem(context, 'eTA Application', '/eta'),
-                        ],
+                        children: _isLoading
+                            ? [
+                                const Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Center(
+                                      child: SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white70))),
+                                )
+                              ]
+                            : _categories.isEmpty
+                                ? [
+                                    const Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Text("No services available",
+                                          style:
+                                              TextStyle(color: Colors.white38)),
+                                    )
+                                  ]
+                                : _categories.map((category) {
+                                    return _buildSubItem(
+                                      context,
+                                      category,
+                                      () => _navigateToCategory(category),
+                                    );
+                                  }).toList(),
                       ),
                     ),
 
@@ -111,21 +188,29 @@ class ClientSidebar extends StatelessWidget {
                     index: 1,
                     icon: Icons.receipt_long_outlined,
                     label: 'Orders',
-                    isSelected: selectedIndex == 1,
+                    isSelected: widget.selectedIndex == 1,
                   ),
                   _buildNavItem(
                     context: context,
                     index: 2,
                     icon: Icons.account_balance_wallet_outlined,
                     label: 'Wallet',
-                    isSelected: selectedIndex == 2,
+                    isSelected: widget.selectedIndex == 2,
                   ),
                   _buildNavItem(
                     context: context,
                     index: 3,
+                    icon: Icons.notifications_none_outlined,
+                    label: 'Notifications',
+                    isSelected: widget.selectedIndex == 3,
+                    onTap: () => context.go('/profile/notifications'),
+                  ),
+                  _buildNavItem(
+                    context: context,
+                    index: 4,
                     icon: Icons.person_outline,
                     label: 'Profile',
-                    isSelected: selectedIndex == 3,
+                    isSelected: widget.selectedIndex == 4,
                   ),
                 ],
               ),
@@ -142,8 +227,7 @@ class ClientSidebar extends StatelessWidget {
               label: 'Settings',
               isSelected: false,
               onTap: () {
-                // Handle settings navigation or specific logic
-                onItemSelected(3); // Go to profile for now
+                widget.onItemSelected(3); // Go to profile for now
               },
             ),
           ),
@@ -167,7 +251,7 @@ class ClientSidebar extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap ?? () => onItemSelected(index),
+          onTap: onTap ?? () => widget.onItemSelected(index),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -175,7 +259,7 @@ class ClientSidebar extends StatelessWidget {
               color: isSelected ? highlightColor : null,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: isCollapsed
+            child: widget.isCollapsed
                 ? Center(
                     child: Tooltip(
                       message: label,
@@ -223,12 +307,27 @@ class ClientSidebar extends StatelessWidget {
       offset: const Offset(40, 0),
       color: const Color(0xFF052659),
       tooltip: 'Services',
-      itemBuilder: (context) => [
-        _buildPopupMenuItem('KRA Services', '/cyber/kra'),
-        _buildPopupMenuItem('KUCCPS', '/cyber/kuccps'),
-        _buildPopupMenuItem('HELB Loan', '/cyber/helb'),
-        _buildPopupMenuItem('eTA Application', '/eta'),
-      ],
+      itemBuilder: (context) => _isLoading
+          ? [
+              const PopupMenuItem(
+                  child: Text("Loading...",
+                      style: TextStyle(color: Colors.white70)))
+            ]
+          : _categories.isEmpty
+              ? [
+                  const PopupMenuItem(
+                      child: Text("No services",
+                          style: TextStyle(color: Colors.white70)))
+                ]
+              : _categories.map((category) {
+                  return PopupMenuItem<String>(
+                    child: InkWell(
+                      onTap: () => _navigateToCategory(category),
+                      child: Text(category,
+                          style: const TextStyle(color: Colors.white)),
+                    ),
+                  );
+                }).toList(),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -242,25 +341,7 @@ class ClientSidebar extends StatelessWidget {
     );
   }
 
-  PopupMenuItem<String> _buildPopupMenuItem(String label, String route) {
-    return PopupMenuItem<String>(
-        onTap: () {
-          // We use Future.microtask or similar to decouple navigation from the menu close
-          // But go_router context might be tricky in popup items if the sidebar rebuilds.
-          // Using main navigator key is safer if available, but here context.push is standard.
-        },
-        child: InkWell(
-          onTap: () =>
-              GoRouter.of(GlobalContextKey.mainKey.currentContext!).push(route),
-          child: Text(label, style: const TextStyle(color: Colors.white)),
-        ));
-  }
-
-  // Actually, PopupMenuItem onTap is special. It doesn't take a callback to perform actions besides returning value.
-  // Better approach:
-  // onSelected: (value) => context.push(value)
-
-  Widget _buildSubItem(BuildContext context, String label, String route) {
+  Widget _buildSubItem(BuildContext context, String label, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       child: ListTile(
@@ -268,7 +349,7 @@ class ClientSidebar extends StatelessWidget {
         contentPadding: const EdgeInsets.only(left: 32, right: 16),
         title: Text(label,
             style: GoogleFonts.outfit(color: Colors.white60, fontSize: 13)),
-        onTap: () => context.push(route),
+        onTap: onTap,
         hoverColor: Colors.white.withValues(alpha: 0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),

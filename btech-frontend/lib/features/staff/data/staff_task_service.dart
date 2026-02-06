@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class StaffTaskService {
-  static const String baseUrl = 'http://localhost:5000/api/client/orders';
-  static const String staffUrl = 'http://localhost:5000/api/staff';
+  static const String baseUrl = 'http://172.31.235.222:5000/api/client/orders';
+  static const String staffUrl = 'http://172.31.235.222:5000/api/staff';
 
   Future<Map<String, String>> _getHeaders() async {
     const storage = FlutterSecureStorage();

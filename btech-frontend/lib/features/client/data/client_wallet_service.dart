@@ -5,8 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ClientWalletService {
   // Base API URLs
-  static const String apiRoot = 'http://localhost:5000/api';
-  static const String baseUrl = 'http://localhost:5000/api/client/finance';
+  static const String apiRoot = 'http://172.31.235.222:5000/api';
+  static const String baseUrl = 'http://172.31.235.222:5000/api/client/finance';
 
   Future<Map<String, String>> _getHeaders() async {
     const storage = FlutterSecureStorage();

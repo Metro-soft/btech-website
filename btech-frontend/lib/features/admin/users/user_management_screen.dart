@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../shared/admin_theme.dart';
 import 'data/admin_user_service.dart';
-import 'user_detail_screen.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -199,7 +199,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         isActive ? AdminTheme.successGreen : AdminTheme.dangerRed;
 
     String name = user['name'] ?? 'Unknown';
-    String id = user['_id']?.toString().substring(0, 6) ?? '...';
+    String _rawId = user['_id']?.toString() ?? '...';
+    String id =
+        _rawId.length >= 6 ? _rawId.substring(_rawId.length - 6) : _rawId;
     String role = user['role'] ?? 'User';
     String phone = user['phone'] ?? 'N/A';
     String createdAt = user['createdAt'] != null
@@ -208,12 +210,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => UserDetailScreen(user: user),
-          ),
-        );
+        context.push('/admin/users/details', extra: user);
       },
       child: Container(
         decoration: AdminTheme.glassDecoration.copyWith(

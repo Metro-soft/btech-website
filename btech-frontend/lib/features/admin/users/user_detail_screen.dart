@@ -3,6 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../shared/admin_theme.dart';
 
+import '../workflow/data/admin_workflow_service.dart';
+import '../finance/data/admin_finance_service.dart';
+
 class UserDetailScreen extends StatefulWidget {
   final Map<String, dynamic> user;
 
@@ -15,11 +18,36 @@ class UserDetailScreen extends StatefulWidget {
 class _UserDetailScreenState extends State<UserDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final AdminWorkflowService _workflowService = AdminWorkflowService();
+  final AdminFinanceService _financeService = AdminFinanceService();
+
+  Future<List<dynamic>>? _applicationsFuture;
+  Future<List<dynamic>>? _paymentsFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _fetchApplications();
+    _fetchPayments();
+  }
+
+  void _fetchApplications() {
+    final role = widget.user['role']?.toString().toUpperCase() ?? 'USER';
+    final userId = widget.user['_id'];
+
+    setState(() {
+      if (role == 'STAFF' || role == 'ADMIN') {
+        _applicationsFuture = _workflowService.getApplications(staffId: userId);
+      } else {
+        _applicationsFuture = _workflowService.getApplications(userId: userId);
+      }
+    });
+  }
+
+  void _fetchPayments() {
+    _paymentsFuture =
+        _financeService.getTransactions(userId: widget.user['_id']);
   }
 
   @override
@@ -30,9 +58,27 @@ class _UserDetailScreenState extends State<UserDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Ensure future is initialized (helper for hot reload)
+    // We duplicate the logic here to ensure it survives hot reloads
+    if (_applicationsFuture == null) {
+      final role = widget.user['role']?.toString().toUpperCase() ?? 'USER';
+      final userId = widget.user['_id'];
+      if (role == 'STAFF' || role == 'ADMIN') {
+        _applicationsFuture = _workflowService.getApplications(staffId: userId);
+      } else {
+        _applicationsFuture = _workflowService.getApplications(userId: userId);
+      }
+    }
+
+    // Lazy load payments if needed (hot reload safety)
+    _paymentsFuture ??=
+        _financeService.getTransactions(userId: widget.user['_id']);
+
     // Determine data for display
     final String name = widget.user['name'] ?? 'Unknown User';
-    final String id = widget.user['_id']?.toString().substring(0, 6) ?? '...';
+    final String _rawId = widget.user['_id']?.toString() ?? '...';
+    final String id =
+        _rawId.length >= 6 ? _rawId.substring(_rawId.length - 6) : _rawId;
     final String role = widget.user['role']?.toString().toUpperCase() ?? 'USER';
     final bool isActive = widget.user['isActive'] ?? true;
     final String email = widget.user['email'] ?? 'N/A';
@@ -52,9 +98,12 @@ class _UserDetailScreenState extends State<UserDetailScreen>
               onPressed: () => context.pop(),
             ),
             const Text("Users / ", style: TextStyle(color: Colors.white38)),
-            Text("$id - $name",
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w600)),
+            Flexible(
+              child: Text("$id - $name",
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
           ],
         ),
 
@@ -96,8 +145,8 @@ class _UserDetailScreenState extends State<UserDetailScreen>
             controller: _tabController,
             children: [
               _buildGeneralInfoTab(name, id, email, phone, role, createdAt),
-              _buildPlaceholderTab("Applications List"),
-              _buildPlaceholderTab("Transaction History"),
+              _buildApplicationsTab(),
+              _buildPaymentsTab(),
               _buildPlaceholderTab("System Notifications"),
             ],
           ),
@@ -340,6 +389,224 @@ class _UserDetailScreenState extends State<UserDetailScreen>
           )
         ],
       ),
+    );
+  }
+
+  // --- TAB 2: APPLICATIONS ---
+  Widget _buildApplicationsTab() {
+    return FutureBuilder<List<dynamic>>(
+      future: _applicationsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child:
+                  CircularProgressIndicator(color: AdminTheme.primaryAccent));
+        } else if (snapshot.hasError) {
+          return Center(
+              child: Text("Error: ${snapshot.error}",
+                  style: const TextStyle(color: AdminTheme.dangerRed)));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.folder_open, size: 50, color: Colors.white24),
+                const SizedBox(height: 10),
+                Text("No applications found", style: AdminTheme.body),
+              ],
+            ),
+          );
+        }
+
+        final apps = snapshot.data!;
+        return ListView.separated(
+          padding: const EdgeInsets.only(top: 20),
+          itemCount: apps.length,
+          separatorBuilder: (c, i) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final app = apps[index];
+            final status = app['status'] ?? 'PENDING';
+            Color statusColor = _getStatusColor(status);
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: AdminTheme.glassDecoration.copyWith(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Row(
+                children: [
+                  // Icon Wrapper
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.description,
+                        color: AdminTheme.primaryAccent),
+                  ),
+                  const SizedBox(width: 15),
+
+                  // Details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(app['type'] ?? 'Application',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(
+                            "#${app['trackingNumber']} • ${app['createdAt'].toString().substring(0, 10)}",
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+
+                  // Status
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                            color: statusColor.withValues(alpha: 0.3))),
+                    child: Text(status,
+                        style: TextStyle(
+                            color: statusColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 10),
+                  const Icon(Icons.arrow_forward_ios,
+                      size: 14, color: Colors.white38)
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'COMPLETED':
+      case 'PAID':
+        return AdminTheme.successGreen;
+      case 'PENDING':
+        return AdminTheme.warningOrange;
+      case 'REJECTED':
+        return AdminTheme.dangerRed;
+      case 'ASSIGNED':
+      case 'IN_PROGRESS':
+        return const Color(0xFF00CFE8); // Cyan
+      default:
+        return Colors.white54;
+    }
+  }
+
+  // --- TAB 3: PAYMENTS ---
+  Widget _buildPaymentsTab() {
+    return FutureBuilder<List<dynamic>>(
+      future: _paymentsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child:
+                  CircularProgressIndicator(color: AdminTheme.primaryAccent));
+        } else if (snapshot.hasError) {
+          return Center(
+              child: Text("Error: ${snapshot.error}",
+                  style: const TextStyle(color: AdminTheme.dangerRed)));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.receipt_long, size: 50, color: Colors.white24),
+                const SizedBox(height: 10),
+                Text("No transactions found", style: AdminTheme.body),
+              ],
+            ),
+          );
+        }
+
+        final txns = snapshot.data!;
+        return ListView.separated(
+          padding: const EdgeInsets.only(top: 20),
+          itemCount: txns.length,
+          separatorBuilder: (c, i) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final txn = txns[index];
+            final amount = txn['amount'] ?? 0;
+            final type = txn['type'] ?? 'UNKNOWN';
+            final status = txn['status'] ?? 'PENDING';
+            // ignore: unused_local_variable
+            final isCredit = type == 'DEPOSIT' || type == 'INCOME';
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: AdminTheme.glassDecoration.copyWith(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Row(
+                children: [
+                  // Icon
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: (isCredit
+                                ? AdminTheme.successGreen
+                                : AdminTheme.warningOrange)
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8)),
+                    child: Icon(
+                        isCredit ? Icons.arrow_downward : Icons.arrow_upward,
+                        color: isCredit
+                            ? AdminTheme.successGreen
+                            : AdminTheme.warningOrange),
+                  ),
+                  const SizedBox(width: 15),
+
+                  // Details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(type,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(
+                            "#${txn['reference'] ?? 'N/A'} • ${txn['createdAt'].toString().substring(0, 10)}",
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+
+                  // Amount
+                  Text(
+                    "${isCredit ? '+' : '-'} KES $amount",
+                    style: TextStyle(
+                        color: isCredit
+                            ? AdminTheme.successGreen
+                            : Colors.white70, // debit isn't necessarily red/bad
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

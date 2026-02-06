@@ -253,6 +253,23 @@ class _FormBuilderWidgetState extends State<FormBuilderWidget> {
                   onChanged: (val) => _updateField(index, 'type', val),
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 1,
+                child: _buildDropdown(
+                  label: "Width",
+                  value: (field['width'] ?? 1.0).toString(),
+                  items: ['1.0', '0.5', '0.33', '0.25'],
+                  itemLabels: {
+                    '1.0': 'Full',
+                    '0.5': '1/2',
+                    '0.33': '1/3',
+                    '0.25': '1/4'
+                  },
+                  onChanged: (val) => _updateField(
+                      index, 'width', double.tryParse(val!) ?? 1.0),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -386,6 +403,7 @@ class _FormBuilderWidgetState extends State<FormBuilderWidget> {
       {required String label,
       required String value,
       required List<String> items,
+      Map<String, String>? itemLabels,
       required Function(String?) onChanged}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,7 +427,10 @@ class _FormBuilderWidgetState extends State<FormBuilderWidget> {
                 borderSide: BorderSide.none),
           ),
           items: items
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .map((e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(itemLabels?[e] ?? e,
+                      overflow: TextOverflow.ellipsis)))
               .toList(),
           onChanged: onChanged,
         ),

@@ -9,8 +9,8 @@ import 'dart:io';
 
 class ClientApplicationService {
   // Use 10.0.2.2 for Android Emulator, localhost for Web/iOS Simulator
-  static const String baseUrl = 'http://localhost:5000/api/client/orders';
-  static const String apiRoot = 'http://localhost:5000/api';
+  static const String baseUrl = 'http://172.31.235.222:5000/api/client/orders';
+  static const String apiRoot = 'http://172.31.235.222:5000/api';
 
   Future<Map<String, String>> _getHeaders() async {
     // Use Secure Storage for token

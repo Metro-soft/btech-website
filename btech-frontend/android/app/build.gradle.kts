@@ -5,6 +5,13 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("androidx.activity:activity-ktx:1.9.3")
+        force("androidx.activity:activity:1.9.3")
+    }
+}
+
 android {
     namespace = "com.btechplus.btech_frontend"
     compileSdk = flutter.compileSdkVersion

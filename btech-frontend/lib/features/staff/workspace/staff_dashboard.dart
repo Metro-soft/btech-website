@@ -11,6 +11,7 @@ import 'staff_tasks_screen.dart';
 import '../staff_wallet_screen.dart';
 import '../profile/staff_profile_screen.dart';
 import 'widgets/staff_sidebar.dart';
+import '../notifications/screens/staff_notification_screen.dart';
 
 class StaffDashboard extends StatefulWidget {
   const StaffDashboard({super.key});
@@ -82,6 +83,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           StaffHomeScreen(onNavigate: _onNavigate),
           const StaffTasksScreen(),
           const StaffWalletScreen(),
+          const StaffNotificationScreen(),
           const StaffProfileScreen(),
         ],
       ),
@@ -108,6 +110,8 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 icon: Icon(Icons.description), label: 'Tasks'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.notifications), label: 'Alerts'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
@@ -150,6 +154,10 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 const Padding(
                   padding: EdgeInsets.all(32.0),
                   child: StaffWalletScreen(),
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: StaffNotificationScreen(),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(32.0),

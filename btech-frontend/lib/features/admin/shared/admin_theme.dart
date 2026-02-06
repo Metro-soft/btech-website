@@ -26,15 +26,32 @@ class AdminTheme {
       fontSize: 14, fontWeight: FontWeight.normal, color: textGrey);
 
   // Glassmorphism Decoration (The "BTech Look")
+  // Glassmorphism Decoration (The "BTech Look")
   static BoxDecoration glassDecoration = BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.05),
+      color: const Color(0xFF1E1E2C)
+          .withValues(alpha: 0.6), // Darker, richer background
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08)), // Subtle border
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.2),
-          blurRadius: 10,
-          spreadRadius: 2,
+          color: Colors.black.withValues(alpha: 0.3),
+          blurRadius: 15,
+          offset: const Offset(0, 4),
         )
       ]);
+
+  // For active cards or headers
+  static BoxDecoration glassGradient = BoxDecoration(
+    gradient: LinearGradient(
+      colors: [
+        Colors.white.withValues(alpha: 0.1),
+        Colors.white.withValues(alpha: 0.05),
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+  );
 }

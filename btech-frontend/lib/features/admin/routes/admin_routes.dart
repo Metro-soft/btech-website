@@ -5,6 +5,9 @@ import '../users/user_management_screen.dart';
 import '../users/user_detail_screen.dart';
 import '../settings/feature_management_screen.dart';
 import '../services/admin_service_management_screen.dart';
+import '../services/admin_create_service_screen.dart';
+import '../notifications/screens/notification_dashboard.dart';
+import '../audit/screens/admin_audit_screen.dart';
 import '../dashboard/admin_layout.dart';
 import 'package:flutter/material.dart';
 
@@ -64,12 +67,36 @@ final List<RouteBase> adminRoutes = [
         builder: (context, state) => const PlaceholderScreen('Workflow'),
       ),
       GoRoute(
-        path: '/admin/services',
-        builder: (context, state) => const AdminServiceManagementScreen(),
+          path: '/admin/services',
+          builder: (context, state) => const AdminServiceManagementScreen(),
+          routes: [
+            GoRoute(
+              path: 'create',
+              builder: (context, state) => const AdminCreateServiceScreen(),
+            ),
+            GoRoute(
+              path: 'edit/:id',
+              builder: (context, state) {
+                final id = state.pathParameters['id'];
+                return AdminCreateServiceScreen(serviceId: id);
+              },
+            ),
+          ]),
+      GoRoute(
+        path: '/admin/notifications',
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: NotificationDashboard(), // <--- Updated
+        ),
       ),
       GoRoute(
         path: '/admin/profile',
         builder: (context, state) => const AdminProfileScreen(),
+      ),
+      GoRoute(
+        path: '/admin/audit',
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: AdminAuditScreen(),
+        ),
       ),
     ],
   ),

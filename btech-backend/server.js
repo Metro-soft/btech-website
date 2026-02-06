@@ -1,6 +1,9 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const path = require('path');
+const http = require('http');
+const socketIo = require('socket.io');
+const jwt = require('jsonwebtoken');
 const connectDB = require('./src/config/db');
 // const academyRoutes = require('./routes/academyRoutes'); // Removed legacy
 
@@ -50,12 +53,18 @@ app.use('/api/staff/finance', require('./src/modules/staff/finance/staff.finance
 // --- ADMIN MODULE ---
 app.use('/api/admin/workflow', require('./src/modules/admin/workflow/admin.workflow.routes'));
 app.use('/api/admin/finance', require('./src/modules/admin/finance/admin.finance.routes'));
+app.use('/api/admin/audit', require('./src/modules/admin/audit/admin.audit.routes'));
 
 // --- SHARED PUBLIC APIs ---
 app.use('/api/services', require('./src/shared/routes/services.routes'));
-app.use('/api/courses', require('./src/shared/routes/courses.routes'));
-app.use('/api/auth', require('./src/modules/auth/auth.routes'));
 
+// Routes
+app.use('/api/auth', require('./src/modules/auth/auth.routes'));
+app.use('/api/notifications', require('./src/modules/notifications/notification.routes'));
+app.use('/api/clients', require('./src/modules/client/client.routes'));
+
+// --- AI MODULE ---
+app.use('/api/ai', require('./src/modules/ai/ai.routes'));
 
 // Sample root route
 app.get('/', (req, res) => {
@@ -64,4 +73,45 @@ app.get('/', (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Create HTTP server to allow Socket.IO to attach
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = socketIo(server, {
+  cors: {
+    origin: "*", // Allow connections from frontend
+    methods: ["GET", "POST"]
+  }
+});
+
+// Attach IO to global so services can use it
+global.io = io;
+
+// Socket Middleware for Auth
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error('Authentication error'));
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.user = decoded; // { id, role }
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
+});
+
+// Socket Connection Logic
+io.on('connection', (socket) => {
+  console.log(`User Connected: ${socket.user.id}`);
+
+  // Join a room named after the User ID (Private Channel)
+  socket.join(socket.user.id);
+
+  socket.on('disconnect', () => {
+    // console.log('User Disconnected');
+  });
+});
+
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

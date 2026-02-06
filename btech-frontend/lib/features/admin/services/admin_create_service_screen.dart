@@ -29,6 +29,7 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
   String _description = '';
   String _basePrice = '';
   String _category = 'OTHER';
+  String _layoutType = 'classic';
 
   final List<String> _categories = [
     'All',
@@ -38,6 +39,14 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
     'ETA',
     'KUCCPS',
     'OTHER'
+  ];
+
+  final List<String> _layouts = [
+    'classic',
+    'compact',
+    'wizard',
+    'accordion',
+    'stepper'
   ];
 
   List<Map<String, dynamic>> _formStructure = [];
@@ -84,6 +93,7 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
         _description = service['description'] ?? '';
         _basePrice = service['basePrice']?.toString() ?? '';
         _category = service['category'] ?? 'OTHER';
+        _layoutType = service['layoutType'] ?? 'classic';
         if (service['formStructure'] != null) {
           _formStructure =
               List<Map<String, dynamic>>.from(service['formStructure']);
@@ -112,6 +122,7 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
         "title": _title,
         "name": _title, // Maintain legacy name
         "category": _category,
+        "layoutType": _layoutType,
         "description": _description,
         "basePrice": double.tryParse(_basePrice) ?? 0,
         "formStructure": _formStructure,
@@ -264,6 +275,30 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
                                 onChanged: (val) =>
                                     setState(() => _category = val!),
                               ),
+                              const SizedBox(height: 16),
+                              AdminFormStyles.label("Layout Mold"),
+                              DropdownButtonFormField<String>(
+                                key: ValueKey(_layoutType),
+                                initialValue: _layoutType,
+                                dropdownColor: const Color(0xFF2A2A3E),
+                                style: const TextStyle(color: Colors.white),
+                                decoration: AdminFormStyles.inputDecoration(),
+                                items: _layouts
+                                    .map((l) => DropdownMenuItem(
+                                        value: l,
+                                        child: Text(l == 'wizard'
+                                            ? 'Progress Wizard'
+                                            : l == 'stepper'
+                                                ? 'Stepper'
+                                                : l == 'accordion'
+                                                    ? 'Accordion View'
+                                                    : l == 'compact'
+                                                        ? 'Modern Compact'
+                                                        : 'Classic Vertical')))
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _layoutType = val!),
+                              ),
                             ],
                           ),
                         )
@@ -391,11 +426,16 @@ class _AdminCreateServiceScreenState extends State<AdminCreateServiceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Dynamic Form Builder",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Dynamic Form Builder",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     const Text(
                         "Define the fields the client must fill out to apply for this service.",

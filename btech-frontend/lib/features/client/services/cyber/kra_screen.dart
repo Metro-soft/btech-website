@@ -66,199 +66,198 @@ class _KRALandingPageState extends State<KRALandingPage> {
     _servicesFuture = _serviceApi.getServices(category: 'KRA');
   }
 
-  // Helper to group services by subcategory
-  Map<String, List<Map<String, dynamic>>> _groupServices(
-      List<Map<String, dynamic>> services) {
-    final Map<String, List<Map<String, dynamic>>> grouped = {};
-    for (var service in services) {
-      final sub = service['subcategory'] ?? 'Other';
-      if (!grouped.containsKey(sub)) {
-        grouped[sub] = [];
-      }
-      grouped[sub]!.add(service);
-    }
-    return grouped;
-  }
-
-  // Icons map (Static UI helper)
-  IconData _getCategoryIcon(String subcategory) {
-    if (subcategory.contains('Returns')) return Icons.assessment;
-    if (subcategory.contains('Registration') || subcategory.contains('New')) {
-      return Icons.person_add;
-    }
-    if (subcategory.contains('Compliance')) return Icons.verified_user;
-    return Icons.work;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF021024),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _servicesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-                child: Text('Error: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.white)));
-          }
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _servicesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          final services = snapshot.data ?? [];
-          final groupedServices = _groupServices(services);
+        final services = snapshot.data ?? [];
 
-          return CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 200.0,
-                floating: false,
-                pinned: true,
-                backgroundColor: const Color(0xFF021024),
-                iconTheme: const IconThemeData(color: Colors.white),
-                flexibleSpace: FlexibleSpaceBar(
-                  title: Text('KRA iTax Portal',
-                      style: GoogleFonts.outfit(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                  background: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset(
-                        'assets/kra_bg.png', // Ensure this exists or use a gradient
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, o, s) => Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topRight,
-                              end: Alignment.bottomLeft,
+        // Helper to find service by keyword
+        Map<String, dynamic>? findService(String keyword) {
+          try {
+            return services.firstWhere((s) {
+              final title = (s['title'] ?? '').toString().toLowerCase();
+              final sub = (s['subcategory'] ?? '').toString().toLowerCase();
+              return title.contains(keyword.toLowerCase()) ||
+                  sub.contains(keyword.toLowerCase());
+            });
+          } catch (e) {
+            return null;
+          }
+        }
+
+        return CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 220.0,
+              floating: false,
+              pinned: true,
+              backgroundColor: const Color(0xFF021024),
+              iconTheme: const IconThemeData(color: Colors.white),
+              flexibleSpace: FlexibleSpaceBar(
+                title: Text('KRA iTax Portal',
+                    style: GoogleFonts.outfit(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      'assets/kra_bg.png', // Ensure this exists
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                               colors: [
                                 Colors.red[900]!,
                                 const Color(0xFF021024)
-                              ],
-                            ),
-                          ),
+                              ]),
                         ),
                       ),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              const Color(0xFF021024).withValues(alpha: 0.9),
-                            ],
-                          ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            const Color(0xFF021024).withValues(alpha: 0.9),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.all(16.0),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      if (index == 0) {
-                        return _buildSectionTitle('Select a Service');
-                      }
-                      // Offset index by 1 for title
-                      final categoryKey =
-                          groupedServices.keys.elementAt(index - 1);
-                      final categoryServices = groupedServices[categoryKey]!;
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Kenya Revenue Authority',
+                        style: GoogleFonts.outfit(
+                            color: Colors.redAccent,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Manage your taxes efficiently. File returns, apply for PINs, and get compliance certificates.',
+                      style: GoogleFonts.outfit(
+                          color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(height: 32),
+                    const Text('Available Services',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Row(
-                              children: [
-                                Icon(_getCategoryIcon(categoryKey),
-                                    color: Colors.white70),
-                                const SizedBox(width: 8),
-                                Text(categoryKey,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 1.3,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                            ),
-                            itemCount: categoryServices.length,
-                            itemBuilder: (context, i) {
-                              return _buildServiceCard(
-                                  context, categoryServices[i]);
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      );
-                    },
-                    childCount: groupedServices.keys.length + 1,
-                  ),
+                    // 1. File Returns (Most Common)
+                    _buildProductCard(
+                      context,
+                      title: 'File KRA Returns',
+                      description:
+                          'File Nil, Employment (P9), or Business returns easily.',
+                      icon: Icons.assessment,
+                      color: Colors.redAccent,
+                      onTap: () {
+                        final service = findService('Returns');
+                        if (service != null) widget.onServiceSelected(service);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. New Registration
+                    _buildProductCard(
+                      context,
+                      title: 'New PIN Registration',
+                      description:
+                          'Apply for a new KRA PIN for Individual or Company.',
+                      icon: Icons.person_add,
+                      color: Colors.blueAccent,
+                      onTap: () {
+                        final service =
+                            findService('Registration') ?? findService('New');
+                        if (service != null) widget.onServiceSelected(service);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 3. Compliance Certificate
+                    _buildProductCard(
+                      context,
+                      title: 'Tax Compliance Certificate',
+                      description: 'Apply for TCC for Tenders or Employment.',
+                      icon: Icons.verified_user,
+                      color: Colors.green,
+                      onTap: () {
+                        final service = findService('Compliance');
+                        if (service != null) widget.onServiceSelected(service);
+                      },
+                    ),
+
+                    // Dynamically list others if needed, or keep it clean like HELB
+                  ],
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 40)),
-            ],
-          );
-        },
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Text(
-        title,
-        style: GoogleFonts.outfit(
-            color: Colors.redAccent, fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildServiceCard(BuildContext context, Map<String, dynamic> service) {
+  Widget _buildProductCard(BuildContext context,
+      {required String title,
+      required String description,
+      required IconData icon,
+      required Color color,
+      required VoidCallback onTap}) {
     return GestureDetector(
-      onTap: () => widget.onServiceSelected(service),
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: const Color(0xFF052659),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white10),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Row(
           children: [
-            Text(service['title'] ?? 'Service', // DB uses title, UI used name
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis),
-            Text(service['description'] ?? '',
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis),
-            const Align(
-                alignment: Alignment.bottomRight,
-                child:
-                    Icon(Icons.arrow_forward, color: Colors.orange, size: 16)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.2), shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(description,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 16)
           ],
         ),
       ),

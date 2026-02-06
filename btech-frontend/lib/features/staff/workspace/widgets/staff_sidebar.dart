@@ -90,9 +90,16 @@ class StaffSidebar extends StatelessWidget {
                   _buildNavItem(
                     context: context,
                     index: 3,
+                    icon: Icons.notifications_none,
+                    label: 'Notifications',
+                    isSelected: selectedIndex == 3,
+                  ),
+                  _buildNavItem(
+                    context: context,
+                    index: 4,
                     icon: Icons.person_outline,
                     label: 'Profile',
-                    isSelected: selectedIndex == 3,
+                    isSelected: selectedIndex == 4,
                   ),
                 ],
               ),

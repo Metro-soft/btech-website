@@ -10,7 +10,9 @@ import 'dart:io';
 
 class ApplicationService {
   // Use 10.0.2.2 for Android Emulator, localhost for Web/iOS Simulator
-  static const String baseUrl = 'http://localhost:5000/api/applications';
+  static const String baseUrl =
+      'http://172.31.235.222:5000/api/applications'; // For physical device
+  // static const String baseUrl = 'http://10.0.2.2:5000/api/applications'; // For Emulator
 
   Future<Map<String, String>> _getHeaders() async {
     // Use Secure Storage for token
@@ -147,7 +149,7 @@ class ApplicationService {
     }
   }
 
-  static const String staffUrl = 'http://localhost:5000/api/staff';
+  static const String staffUrl = 'http://172.31.235.222:5000/api/staff';
 
   Future<void> completeTask({required String applicationId}) async {
     try {
@@ -329,11 +331,6 @@ class ApplicationService {
       if (category != null) {
         queryString = '?category=$category';
       }
-      // Note: Endpoint is /api/services not /api/applications/services
-      // We need to construct the URL relative to the API root.
-      // Current baseUrl is .../api/applications.
-      // Let's assume we can replace 'applications' with 'services' or define a new baseUrl.
-      // Ideally defining a root baseUrl is better, but for now I'll hack the string replacement.
       final rootUrl = baseUrl.replaceAll('/applications', '');
       final response = await http
           .get(Uri.parse('$rootUrl/services$queryString'), headers: headers);
@@ -346,6 +343,23 @@ class ApplicationService {
       }
     } catch (e) {
       throw Exception('Error fetching services: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getServiceById(String id) async {
+    try {
+      final headers = await _getHeaders();
+      final rootUrl = baseUrl.replaceAll('/applications', '');
+      final response =
+          await http.get(Uri.parse('$rootUrl/services/$id'), headers: headers);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to load service details');
+      }
+    } catch (e) {
+      throw Exception('Error fetching service details: $e');
     }
   }
 

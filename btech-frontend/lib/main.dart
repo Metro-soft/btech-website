@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 import 'routes/app_router.dart';
 
+import 'package:provider/provider.dart';
+import 'core/providers/notification_provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BTechApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+            create: (_) => NotificationProvider()..initSocket()),
+      ],
+      child: const BTechApp(),
+    ),
+  );
 }
 
 class BTechApp extends StatelessWidget {

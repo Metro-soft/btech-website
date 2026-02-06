@@ -5,7 +5,11 @@ const AuditService = require('../../../shared/services/audit.service');
 // @route   GET /api/admin/finance/transactions
 exports.getAllTransactions = async (req, res) => {
     try {
-        const transactions = await Transaction.find()
+        const { user } = req.query;
+        let query = {};
+        if (user) query.user = user;
+
+        const transactions = await Transaction.find(query)
             .populate('user', 'name email')
             .sort({ createdAt: -1 })
             .limit(100);

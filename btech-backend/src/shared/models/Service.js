@@ -27,13 +27,19 @@ const serviceSchema = new mongoose.Schema({
 
   isActive: { type: Boolean, default: true },
 
+  layoutType: {
+    type: String,
+    enum: ['classic', 'compact', 'wizard', 'accordion', 'stepper'],
+    default: 'classic'
+  },
+
   tags: [{ type: String }], // For fuzzy search
 
   // Dynamic Form Structure for this service
   formStructure: [{
     type: {
       type: String,
-      enum: ['text', 'number', 'date', 'file', 'dropdown', 'checkbox'],
+      enum: ['text', 'number', 'date', 'file', 'dropdown', 'checkbox', 'section'],
       required: true
     },
     label: { type: String, required: true },

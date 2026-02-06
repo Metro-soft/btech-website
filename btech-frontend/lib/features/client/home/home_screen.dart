@@ -97,9 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon:
                 const Icon(Icons.notifications_outlined, color: highlightColor),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('No new notifications')),
-              );
+              context.go('/profile/notifications');
             },
           ),
           if (_role == null)
@@ -129,48 +127,62 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
+  final ApplicationService _api = ApplicationService();
+  List<Map<String, dynamic>> _allServices = [];
+  bool _isLoading = true;
+
   String _selectedCategory = 'All';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _allServices = [
-    {
-      'name': 'KRA Services',
-      'icon': Icons.receipt_long,
-      'route': '/cyber/kra',
-      'category': 'Government'
-    },
-    {
-      'name': 'KUCCPS',
-      'icon': Icons.school,
-      'route': '/cyber/kuccps',
-      'category': 'Education'
-    },
-    {
-      'name': 'HELB Loan',
-      'icon': Icons.monetization_on,
-      'route': '/cyber/helb',
-      'category': 'Education'
-    },
-    {
-      'name': 'eTA App',
-      'icon': Icons.flight_takeoff,
-      'route': '/eta',
-      'category': 'Travel'
-    },
-    // Removed eCitizen and Help as requested
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchServices();
+
+    // Check query params for initial category filter
+    // We need to wait for the build frame or access GoRouterState properly
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = GoRouterState.of(context);
+      final category = state.uri.queryParameters['category'];
+      if (category != null && category.isNotEmpty) {
+        setState(() => _selectedCategory = category);
+      }
+    });
+  }
+
+  Future<void> _fetchServices() async {
+    try {
+      final services = await _api.getServices();
+      setState(() {
+        _allServices = services;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   List<Map<String, dynamic>> get _filteredServices {
     return _allServices.where((service) {
-      final matchesCategory = _selectedCategory == 'All' ||
-          service['category'] == _selectedCategory;
-      final matchesSearch = service['name']
-          .toString()
-          .toLowerCase()
-          .contains(_searchQuery.toLowerCase());
+      final category = service['category'] ?? 'Other';
+      final name = service['title'] ?? 'Service';
+
+      final matchesCategory =
+          _selectedCategory == 'All' || category == _selectedCategory;
+      final matchesSearch =
+          name.toString().toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
+  }
+
+  IconData _getIconForCategory(String? category) {
+    if (category == 'KRA') return Icons.receipt_long;
+    if (category == 'HELB') return Icons.monetization_on;
+    if (category == 'Education' || category == 'KUCCPS') return Icons.school;
+    if (category == 'Travel' || category == 'ETA') return Icons.flight_takeoff;
+    if (category == 'Banking') return Icons.account_balance;
+    return Icons.work;
   }
 
   @override
@@ -307,19 +319,21 @@ class _HomeContentState extends State<HomeContent> {
                     scrollDirection: Axis.horizontal,
                     itemCount: [
                       'All',
-                      'Government',
-                      'Education',
+                      'KRA',
+                      'HELB',
                       'Banking',
-                      'Travel'
+                      'Travel',
+                      'Education'
                     ].length,
                     separatorBuilder: (c, i) => const SizedBox(width: 12),
                     itemBuilder: (context, index) {
                       final category = [
                         'All',
-                        'Government',
-                        'Education',
+                        'KRA',
+                        'HELB',
                         'Banking',
-                        'Travel'
+                        'Travel',
+                        'Education'
                       ][index];
                       final isSelected = _selectedCategory == category;
                       return GestureDetector(
@@ -361,7 +375,9 @@ class _HomeContentState extends State<HomeContent> {
           const SizedBox(height: 32),
 
           // Grid Content
-          if (_filteredServices.isEmpty)
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator())
+          else if (_filteredServices.isEmpty)
             SizedBox(
               height: 300,
               child: Center(
@@ -565,8 +581,13 @@ class _HomeContentState extends State<HomeContent> {
 
   Widget _buildServiceCard(Map<String, dynamic> service, Color bgColor,
       Color cardColor, Color highlightColor) {
+    final title = service['title'] ?? 'Service';
+    final category = service['category'];
+    final icon = _getIconForCategory(category);
+    final serviceId = service['_id'];
+
     return GestureDetector(
-      onTap: () => context.push(service['route'] as String),
+      onTap: () => context.push('/service/$serviceId'), // Dynamic Route
       child: Container(
         decoration: BoxDecoration(
           color: cardColor,
@@ -584,7 +605,7 @@ class _HomeContentState extends State<HomeContent> {
             Positioned(
               right: -10,
               top: -10,
-              child: Icon(service['icon'] as IconData,
+              child: Icon(icon,
                   size: 80, color: Colors.white.withValues(alpha: 0.03)),
             ),
             Padding(
@@ -599,19 +620,20 @@ class _HomeContentState extends State<HomeContent> {
                       color: bgColor,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(service['icon'] as IconData,
-                        color: highlightColor, size: 24),
+                    child: Icon(icon, color: highlightColor, size: 24),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        service['name'] as String,
+                        title,
                         style: GoogleFonts.outfit(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Row(

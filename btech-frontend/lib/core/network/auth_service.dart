@@ -11,15 +11,19 @@ class AuthService {
   final _storage = const FlutterSecureStorage();
 
   // Dynamic Base URL
-  static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5000/api/auth';
+  // Dynamic Base URL
+  static String get _rootUrl {
+    if (kIsWeb) return 'http://172.31.235.222:5000/api';
     try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:5000/api/auth';
+      if (Platform.isAndroid) return 'http://172.31.235.222:5000/api';
     } catch (e) {
       // Platform check might fail in some edge cases
     }
-    return 'http://localhost:5000/api/auth';
+    return 'http://172.31.235.222:5000/api';
   }
+
+  static String get rootUrl => _rootUrl;
+  static String get baseUrl => '$_rootUrl/auth';
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
@@ -134,6 +138,70 @@ class AuthService {
       return data;
     } else {
       throw Exception('Update failed: ${response.body}');
+    }
+  }
+
+  // Generic Authenticated Request Helper
+  Future<dynamic> authenticatedRequest(
+    String method,
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
+    final token = await _storage.read(key: 'token');
+    if (token == null) throw Exception('No authentication token found');
+
+    // Ensure endpoint starts with slash relative to API root, or handle full URL
+    // Here we assume endpoint is like '/notifications'
+    final uri = Uri.parse('$_rootUrl$endpoint');
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    http.Response response;
+
+    try {
+      if (method == 'GET') {
+        response = await http.get(uri, headers: headers);
+      } else if (method == 'POST') {
+        response =
+            await http.post(uri, headers: headers, body: jsonEncode(body));
+      } else if (method == 'PUT') {
+        response =
+            await http.put(uri, headers: headers, body: jsonEncode(body));
+      } else if (method == 'DELETE') {
+        response = await http.delete(uri, headers: headers);
+      } else {
+        throw Exception('Unsupported HTTP method: $method');
+      }
+
+      // We return the raw response object to let the caller handle status codes
+      // or we could wrap it. For now, let's return a simple wrapper or the http.Response
+      // The calling code expects 'response.statusCode' and 'response.data' (if using Dio style)
+      // Since we are using http package, let's return a custom object or just the http.Response
+      // and update the caller to access .body instead of .data
+
+      return _HttpResponseWrapper(response);
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+}
+
+// Simple wrapper to match the calling code expectation (response.data)
+class _HttpResponseWrapper {
+  final http.Response _response;
+
+  _HttpResponseWrapper(this._response);
+
+  int get statusCode => _response.statusCode;
+
+  dynamic get data {
+    try {
+      return jsonDecode(_response.body);
+    } catch (_) {
+      return _response.body;
     }
   }
 }

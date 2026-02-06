@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../workspace/staff_dashboard.dart';
 import '../staff_wallet_screen.dart';
 import '../profile/staff_profile_screen.dart';
+import '../notifications/screens/staff_notification_screen.dart';
 
 final List<RouteBase> staffRoutes = [
   GoRoute(
@@ -15,6 +16,10 @@ final List<RouteBase> staffRoutes = [
       GoRoute(
         path: 'profile',
         builder: (context, state) => const StaffProfileScreen(),
+      ),
+      GoRoute(
+        path: 'notifications',
+        builder: (context, state) => const StaffNotificationScreen(),
       ),
     ],
   ),

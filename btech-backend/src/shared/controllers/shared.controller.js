@@ -5,7 +5,7 @@ const Course = require('../models/Course');
 
 exports.getServices = async (req, res) => {
     try {
-        const services = await Service.find().sort({ name: 1 });
+        const services = await Service.find().sort({ title: 1 });
         res.json(services);
     } catch (err) {
         res.status(500).json({ message: 'Server Error' });

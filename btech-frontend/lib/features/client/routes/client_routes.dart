@@ -10,6 +10,8 @@ import '../services/cyber/cyber_home_screen.dart';
 import '../services/cyber/kuccps_screen.dart';
 import '../services/cyber/helb_screen.dart';
 import '../services/cyber/kra_screen.dart';
+import '../notifications/screens/client_notification_screen.dart';
+import '../services/dynamic_service_screen.dart';
 
 final List<RouteBase> clientRoutes = [
   GoRoute(
@@ -52,6 +54,13 @@ final List<RouteBase> clientRoutes = [
                       builder: (context, state) => const KRAScreen(),
                     ),
                   ]),
+              GoRoute(
+                path: 'service/:serviceId',
+                builder: (context, state) {
+                  final serviceId = state.pathParameters['serviceId']!;
+                  return DynamicServiceScreen(serviceId: serviceId);
+                },
+              ),
             ],
           ),
         ],
@@ -89,9 +98,14 @@ final List<RouteBase> clientRoutes = [
       StatefulShellBranch(
         routes: [
           GoRoute(
-            path: '/profile',
-            builder: (context, state) => const ProfileScreen(),
-          ),
+              path: '/profile',
+              builder: (context, state) => const ProfileScreen(),
+              routes: [
+                GoRoute(
+                  path: 'notifications',
+                  builder: (context, state) => const ClientNotificationScreen(),
+                ),
+              ]),
         ],
       ),
     ],
